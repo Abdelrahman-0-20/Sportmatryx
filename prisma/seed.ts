@@ -1,0 +1,913 @@
+ 
+/**
+ * Sportmetryx Football — deterministic synthetic seed (PROTOTYPE DATA).
+ *
+ * Repeatability: reset with `pnpm db:setup` (init → migrate → seed) or
+ * `pnpm db:reset && pnpm prisma migrate deploy && pnpm db:seed`.
+ * Values are deterministic via mulberry32 PRNG; dates are anchored to the
+ * seed run time so dashboards always show a fresh 14-day window.
+ *
+ * All records are SYNTHETIC and must never be presented as real measurements.
+ * Demo credentials are development-only (documented in README).
+ */
+import { PrismaClient, Prisma } from "@prisma/client";
+import { hashPassword } from "../src/lib/auth/password";
+import { weightsForPosition } from "../src/lib/scoring/config";
+import { computeScore, buildBaselines } from "../src/lib/scoring/engine";
+import { persistScore } from "../src/lib/scoring/persist";
+import type { MetricSnapshot, ScoringInput } from "../src/lib/scoring/types";
+import type { MetricKey } from "../src/lib/scoring/config";
+
+const prisma = new PrismaClient();
+
+// ---------------------------------------------------------------------------
+// Deterministic PRNG (mulberry32)
+// ---------------------------------------------------------------------------
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seedFromString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+const NOW = new Date();
+const DAY_MS = 24 * 3600 * 1000;
+function dayStart(offsetDays: number): Date {
+  const d = new Date(NOW.getTime() - offsetDays * DAY_MS);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+function iso(d: Date): string {
+  return d.toISOString();
+}
+
+// ---------------------------------------------------------------------------
+// Athlete generation archetypes
+// ---------------------------------------------------------------------------
+interface AthleteSpec {
+  externalId: string;
+  first: string;
+  last: string;
+  position: "QB" | "SKILL" | "TRENCH" | "LB_TE" | "ST" | "OTHER";
+  team: 0 | 1 | 2;
+  archetype: "VALID_READY" | "VALID_MONITOR" | "LOAD_SPIKE" | "STALE_CAL" | "MULTI_FAIL" | "CONSENT_RESTRICTED" | "LOW_BASELINE" | "ORDINARY";
+  rosterRole?: string;
+}
+
+const FIRST_NAMES = [
+  "Marcus", "Tyrell", "Jordan", "Darnell", "Cole", "Amari", "Brock", "Xavier", "Trent", "Silas",
+  "Jermaine", "Carter", "Deion", "Ezra", "Kelvin", "Malik", "Owen", "Paxton", "Reggie", "Shaun",
+  "Terrence", "Vaughn", "Wallace", "Zion", "Anders", "Blaine", "Corbin", "Duke", "Emmitt", "Foster",
+  "Grady", "Hassan", "Irvin", "Jamal", "Kurt", "Levi", "Micah", "Nash", "Orson", "Priest",
+  "Quinton", "Rashad", "Sawyer", "Thaddeus", "Uriah", "Vance", "Wes", "Alex", "Bo", "Chris",
+  "Dane", "Evan", "Frank", "Gus",
+];
+const LAST_NAMES = [
+  "Whitmore", "Ellison", "Barrow", "Kadri", "Nakamura", "Osei", "Vasquez", "Draper", "Holt", "Mbeki",
+  "Fontaine", "Grimaldi", "Shaw", "Petrov", "Reyes", "Sandoval", "Tucker", "Ulrich", "Vincent", "Woo",
+  "Yates", "Zeller", "Adeyemi", "Brandt", "Cruz", "Delgado", "Eriksen", "Farrow", "Gibbs", "Harmon",
+  "Ibarra", "Jansen", "Kowalski", "Lindqvist", "Moreau", "Novak", "Okafor", "Pietersen", "Quinn", "Rossi",
+  "Silva", "Tanaka", "Ustinov", "Verhoeven", "Weber", "Xu", "Yilmaz", "Zapata", "Abernathy", "Byrne",
+  "Castillo", "Doyle", "Egan", "Fitzgerald",
+];
+
+function athleteSpecs(): AthleteSpec[] {
+  const specs: AthleteSpec[] = [
+    { externalId: "EC-10", first: "Ethan", last: "Calhoun", position: "SKILL", team: 0, archetype: "VALID_READY", rosterRole: "Starter" },
+    { externalId: "EC-01", first: "Enzo", last: "Calloway", position: "QB", team: 0, archetype: "STALE_CAL", rosterRole: "Starter" },
+    { externalId: "EC-11", first: "Emmett", last: "Colter", position: "TRENCH", team: 0, archetype: "MULTI_FAIL", rosterRole: "Starter" },
+    { externalId: "EC-12", first: "Elias", last: "Crane", position: "SKILL", team: 0, archetype: "CONSENT_RESTRICTED", rosterRole: "Starter" },
+    { externalId: "EC-07", first: "Jordan", last: "Jennings", position: "TRENCH", team: 0, archetype: "LOAD_SPIKE", rosterRole: "Starter" },
+    { externalId: "EC-15", first: "Arthur", last: "Smith", position: "LB_TE", team: 0, archetype: "VALID_MONITOR", rosterRole: "Starter" },
+    { externalId: "EC-22", first: "Miles", last: "Okafor", position: "ST", team: 0, archetype: "LOW_BASELINE", rosterRole: "Specialist" },
+    { externalId: "EC-23", first: "Theo", last: "Lindqvist", position: "ST", team: 0, archetype: "LOW_BASELINE", rosterRole: "Specialist" },
+  ];
+  const positions: AthleteSpec["position"][] = ["QB", "SKILL", "SKILL", "SKILL", "TRENCH", "TRENCH", "TRENCH", "TRENCH", "LB_TE", "LB_TE", "ST"];
+  let fi = 0;
+  let li = 0;
+  let n = 0;
+  for (let t = 0; t < 3; t++) {
+    const perTeam = t === 0 ? 26 : t === 1 ? 14 : 10;
+    while (specs.filter((s) => s.team === t).length < perTeam) {
+      const position = positions[n % positions.length];
+      specs.push({
+        externalId: `EC-${(30 + n).toString().padStart(2, "0")}`,
+        first: FIRST_NAMES[fi++ % FIRST_NAMES.length],
+        last: LAST_NAMES[li++ % LAST_NAMES.length],
+        position,
+        team: t as 0 | 1 | 2,
+        archetype: n % 9 === 0 ? "VALID_MONITOR" : "ORDINARY",
+        rosterRole: n % 4 === 0 ? "Starter" : n % 4 === 1 ? "Rotation" : "Practice Squad",
+      });
+      n += 1;
+    }
+  }
+  return specs;
+}
+
+// ---------------------------------------------------------------------------
+// Observation generation for one athlete/day
+// ---------------------------------------------------------------------------
+interface ObsDraft {
+  athleteId: string;
+  dataSourceId: string;
+  deviceId: string | null;
+  timestamp: Date;
+  type: string;
+  value: number;
+  unit: string;
+  isValid: boolean;
+  metadata: Prisma.InputJsonValue;
+}
+
+function genDay(
+  spec: AthleteSpec,
+  athleteId: string,
+  dsIds: Record<string, string>,
+  deviceByArchetype: Record<string, string>,
+  day: Date,
+  rnd: () => number,
+  opts: { game: boolean; practice: boolean; travel: boolean; heat: boolean; forceBad?: boolean; invalidHeavy?: boolean; bias?: number },
+): ObsDraft[] {
+  const out: ObsDraft[] = [];
+  const push = (type: string, value: number, unit: string, deviceId: string | null, sigQ = 0.9, isValid = true, extra: Record<string, unknown> = {}) => {
+    out.push({
+      athleteId,
+      dataSourceId: dsIds[type],
+      deviceId,
+      timestamp: new Date(day.getTime() + (6 + rnd() * 8) * 3600 * 1000),
+      type,
+      value,
+      unit,
+      isValid,
+      metadata: { source: "SYNTHETIC", signalQuality: sigQ, ...extra } as Prisma.InputJsonValue,
+    });
+  };
+
+  const noisy = (base: number, amp: number) => base + (rnd() - 0.5) * amp;
+  // Direction-aware bias: recent days trend up for READY athletes, down for
+  // suppressed recovery. DEViation metrics stay near the athlete's own p50.
+  const b = opts.bias ?? 0;
+  const bad = opts.forceBad === true;
+  const sig = bad ? 0.55 : 0.85 + rnd() * 0.15;
+  const dev = deviceByArchetype[spec.archetype] ?? deviceByArchetype.ORDINARY;
+  const invalid = opts.invalidHeavy ? rnd() < 0.25 : rnd() < 0.04;
+
+  const wear = bad ? 12 : 30 + rnd() * 40;
+  push("RESP_RATE", Math.max(6, noisy(16, 6)), "brpm", dev, sig, !invalid, { maskWearMinutes: Math.round(wear) });
+  push("VENT_EFF", clamp(noisy(0.86 + b * 0.06, 0.12), 0.4, 0.99), "ratio", dev, sig, !invalid);
+  push("SPO2", clamp(noisy(97 + b * 1.5, 3), 88, 100), "%", dev, sig, !invalid);
+  push("VO2_PROXY", clamp(noisy(52 + b * 5, 10), 35, 70), "ml/kg/min", dev, sig, !invalid);
+  push("HRV_MS", clamp(noisy(74 + b * 13, 26), 20, 160), "ms", dev, sig, !invalid);
+  push("RHR", clamp(noisy(57 - b * 4, 8), 38, 90), "bpm", dev, sig, !invalid);
+  push("SLEEP_H", clamp(noisy(7.6, 2.4), 4.5, 10.5), "h", null, sig, !invalid);
+  push("JUMP_CM", clamp(noisy(56 + b * 5, 10), 30, 80), "cm", dev, sig, !invalid);
+  push("ACCEL_N", Math.round(clamp(noisy(55, 30), 5, 140)), "count", dev, sig, !invalid);
+
+  if (opts.game || opts.practice) {
+    const load = opts.game ? noisy(840, 220) : noisy(560, 200);
+    push("LOAD_AU", Math.round(clamp(load, 120, 1200)), "au", dev, sig, !invalid);
+    push("ACWR", clamp(noisy(spec.archetype === "LOAD_SPIKE" && opts.practice ? 1.72 : 1.12, 0.4), 0.5, 2.2), "ratio", dev, sig, !invalid);
+  } else {
+    push("ACWR", clamp(noisy(0.95, 0.3), 0.4, 1.4), "ratio", dev, sig, !invalid);
+  }
+
+  // Environment (synthetic sourced context)
+  const heat = opts.heat ? 29 + rnd() * 8 : 17 + rnd() * 9;
+  const aqi = opts.heat ? 55 + rnd() * 60 : 18 + rnd() * 45;
+  const alt = 120 + rnd() * 300;
+  const tz = opts.travel ? 5 + rnd() * 2 : 0;
+  push("HEAT_C", Number(heat.toFixed(1)), "°C", null, 1, true);
+  push("AQI", Math.round(aqi), "index", null, 1, true);
+  push("ALT_M", Math.round(alt), "m", null, 1, true);
+  push("TZ_SHIFT_H", Number(tz.toFixed(1)), "h", null, 1, true);
+
+  return out;
+}
+
+function clamp(x: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, x));
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+async function main() {
+  console.log("Seeding Sportmetryx Football demo (synthetic data only)…");
+
+  // ---- 1. Wipe (repeatable reset) ----
+  await prisma.interventionReview.deleteMany();
+  await prisma.intervention.deleteMany();
+  await prisma.report.deleteMany();
+  await prisma.auditLog.deleteMany();
+  await prisma.validityCheck.deleteMany();
+  await prisma.scoreDriver.deleteMany();
+  await prisma.scoreComponent.deleteMany();
+  await prisma.performanceScore.deleteMany();
+  await prisma.baselineObservation.deleteMany();
+  await prisma.athleteBaseline.deleteMany();
+  await prisma.footballContext.deleteMany();
+  await prisma.trainingSession.deleteMany();
+  await prisma.observation.deleteMany();
+  await prisma.importJob.deleteMany();
+  await prisma.calibrationRecord.deleteMany();
+  await prisma.device.deleteMany();
+  await prisma.dataSource.deleteMany();
+  await prisma.consentRecord.deleteMany();
+  await prisma.athlete.deleteMany();
+  await prisma.positionConfiguration.deleteMany();
+  await prisma.modelConfigurationVersion.deleteMany();
+  await prisma.performanceModel.deleteMany();
+  await prisma.teamMembership.deleteMany();
+  await prisma.team.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.account.deleteMany();
+  await prisma.user.deleteMany();
+
+  // ---- 2. Users (development-only demo accounts) ----
+  const demoPassword = "Demo-SMX-2024!";
+  const hashed = await hashPassword(demoPassword);
+  const usersSpec: { email: string; name: string; role: "ADMIN" | "PERFORMANCE" | "MEDICAL" | "COACH" | "EXECUTIVE" | "ATHLETE" }[] = [
+    { email: "admin@demo.sportmetryx.dev", name: "Demo Administrator (DEV ONLY)", role: "ADMIN" },
+    { email: "performance@demo.sportmetryx.dev", name: "Demo Performance Staff (DEV ONLY)", role: "PERFORMANCE" },
+    { email: "medical@demo.sportmetryx.dev", name: "Demo Medical Staff (DEV ONLY)", role: "MEDICAL" },
+    { email: "coach@demo.sportmetryx.dev", name: "Demo Coach / Football Ops (DEV ONLY)", role: "COACH" },
+    { email: "executive@demo.sportmetryx.dev", name: "Demo Executive (DEV ONLY)", role: "EXECUTIVE" },
+    { email: "athlete@demo.sportmetryx.dev", name: "Demo Athlete (DEV ONLY)", role: "ATHLETE" },
+  ];
+  const users: Record<string, string> = {};
+  for (const u of usersSpec) {
+    const created = await prisma.user.create({
+      data: { email: u.email, name: u.name, role: u.role, hashedPassword: hashed },
+      select: { id: true },
+    });
+    users[u.role] = created.id;
+  }
+
+  // ---- 3. Teams ----
+  const teams = await Promise.all([
+    prisma.team.create({ data: { name: "Ironmark Stallions", description: "Primary demo franchise (synthetic roster)." } }),
+    prisma.team.create({ data: { name: "Redgate Falcons", description: "Satellite demo club (synthetic roster)." } }),
+    prisma.team.create({ data: { name: "Caldera Miners", description: "Satellite demo club (synthetic roster)." } }),
+  ]);
+  for (const [role, userId] of Object.entries(users)) {
+    await prisma.teamMembership.create({
+      data: { userId, teamId: teams[0].id, role: role as "ADMIN" | "PERFORMANCE" | "MEDICAL" | "COACH" | "EXECUTIVE" | "ATHLETE" },
+    });
+  }
+
+  // ---- 4. Position configurations + performance model versions ----
+  const positionDescriptions: Record<string, string> = {
+    QB: "SMX-QB — quarterback workload and recovery emphasis.",
+    SKILL: "SMX-SKILL — wide receivers, running backs, defensive backs.",
+    TRENCH: "SMX-TRENCH — offensive and defensive line.",
+    LB_TE: "SMX-LB/TE — linebacker, tight end and hybrid roles.",
+    ST: "SMX-ST — kicking, punting and return units.",
+    OTHER: "Unassigned hybrid roles.",
+  };
+  for (const p of ["QB", "SKILL", "TRENCH", "LB_TE", "ST", "OTHER"] as const) {
+    await prisma.positionConfiguration.create({
+      data: { positionType: p, description: positionDescriptions[p] },
+    });
+  }
+
+  const model = await prisma.performanceModel.create({
+    data: {
+      name: "SMX Performance Index",
+      description: "Composite readiness index (0–100). PROTOTYPE — decision support only.",
+    },
+  });
+  const modelVersion = await prisma.modelConfigurationVersion.create({
+    data: {
+      performanceModelId: model.id,
+      versionNumber: 1,
+      isActive: true,
+      weights: weightsForPosition("DEFAULT") as unknown as Prisma.InputJsonValue,
+      normalizationRules: {
+        method: "ATHLETE_OWN_BASELINE_P10_P90",
+        deviation: "Closeness to athlete's own p50",
+        renormalization: "EXPLICIT when components missing; result marked LIMITED",
+      } as unknown as Prisma.InputJsonValue,
+      validityRules: {
+        calibrationStaleHours: 24,
+        calibrationCriticalHours: 48,
+        minValidSampleRatio: 0.8,
+        minSignalQuality: 0.7,
+        minMaskWearMinutes: 20,
+        baselineWindowDays: 28,
+        baselineMinObservations: 8,
+        bands: { READY: 70, MONITOR: 40 },
+        acwrSpikeThreshold: 1.5,
+      } as unknown as Prisma.InputJsonValue,
+      createdBy: users.ADMIN,
+    },
+  });
+
+  // ---- 5. Devices + calibration ----
+  const hAgo = (h: number) => new Date(NOW.getTime() - h * 3600000);
+  const deviceDefs = [
+    { serial: "DEV-010", model: "O2-MASK-V1", manufacturer: "RespiroCorp", type: "Respiratory Mask", calH: 2, calStatus: "OK" },
+    { serial: "DEV-011", model: "CHEST-STRAP-X", manufacturer: "BioFit", type: "Chest Strap", calH: 30, calStatus: "OK" },
+    { serial: "DEV-012", model: "O2-MASK-V1", manufacturer: "RespiroCorp", type: "Respiratory Mask", calH: 60, calStatus: "OK" },
+    { serial: "DEV-013", model: "O2-MASK-V1", manufacturer: "RespiroCorp", type: "Respiratory Mask", calH: 72, calStatus: "Expired" },
+    { serial: "DEV-014", model: "GPS-POD-G3", manufacturer: "FieldSense", type: "GPS Unit", calH: 4, calStatus: "OK" },
+    { serial: "DEV-015", model: "ENV-STATION-1", manufacturer: "Aeris Labs", type: "Environment Station", calH: 8, calStatus: "OK" },
+  ];
+  const devices: Record<string, string> = {};
+  for (const d of deviceDefs) {
+    const created = await prisma.device.create({
+      data: {
+        serialNumber: d.serial,
+        model: d.model,
+        manufacturer: d.manufacturer,
+        type: d.type,
+        description: `Synthetic demo ${d.type.toLowerCase()} (${d.serial}).`,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    devices[d.serial] = created.id;
+    await prisma.calibrationRecord.create({
+      data: {
+        deviceId: created.id,
+        calibrationDate: hAgo(d.calH),
+        nextCalibrationDate: new Date(NOW.getTime() + 14 * DAY_MS),
+        status: d.calStatus,
+        performedBy: users.PERFORMANCE,
+        notes: d.calStatus === "OK" ? "Routine calibration (synthetic)." : "Synthetic demo device with overdue calibration.",
+      },
+    });
+  }
+  const deviceByArchetype: Record<string, string> = {
+    STALE_CAL: devices["DEV-012"],
+    MULTI_FAIL: devices["DEV-013"],
+    ORDINARY: devices["DEV-010"],
+    VALID_READY: devices["DEV-010"],
+    VALID_MONITOR: devices["DEV-011"],
+    LOAD_SPIKE: devices["DEV-011"],
+    CONSENT_RESTRICTED: devices["DEV-010"],
+    LOW_BASELINE: devices["DEV-014"],
+  };
+
+  // ---- 6. Data sources ----
+  const srcDefs = [
+    { name: "Synthetic Generator", type: "SYNTHETIC" },
+    { name: "Manual Entry", type: "MANUAL" },
+    { name: "CSV Import", type: "FILE_UPLOAD" },
+    { name: "Device Stream", type: "DEVICE_INTEGRATION" },
+    { name: "Environment Feed", type: "SYNTHETIC" },
+  ];
+  const ds: Record<string, string> = {};
+  for (const s of srcDefs) {
+    const created = await prisma.dataSource.create({
+      data: { name: s.name, type: s.type, description: "Synthetic demo source." },
+      select: { id: true },
+    });
+    ds[s.name] = created.id;
+  }
+  const dsIds: Record<string, string> = {
+    RESP_RATE: ds["Device Stream"],
+    VENT_EFF: ds["Device Stream"],
+    SPO2: ds["Device Stream"],
+    VO2_PROXY: ds["Device Stream"],
+    HRV_MS: ds["Device Stream"],
+    RHR: ds["Device Stream"],
+    SLEEP_H: ds["Device Stream"],
+    LOAD_AU: ds["Synthetic Generator"],
+    ACWR: ds["Synthetic Generator"],
+    JUMP_CM: ds["Synthetic Generator"],
+    ACCEL_N: ds["Synthetic Generator"],
+    HEAT_C: ds["Environment Feed"],
+    AQI: ds["Environment Feed"],
+    ALT_M: ds["Environment Feed"],
+    TZ_SHIFT_H: ds["Environment Feed"],
+  };
+
+  // ---- 7. Athletes, consent, history, baselines, scores ----
+  const specs = athleteSpecs();
+  const createdAthletes: { id: string; spec: AthleteSpec }[] = [];
+  for (const spec of specs) {
+    const athlete = await prisma.athlete.create({
+      data: {
+        externalId: spec.externalId,
+        firstName: spec.first,
+        lastName: spec.last,
+        teamId: teams[spec.team].id,
+        position: spec.position,
+        rosterRole: spec.rosterRole ?? "Rotation",
+        isActive: true,
+        dateOfBirth: new Date(1996 + (seedFromString(spec.externalId) % 8), (seedFromString(spec.first) % 12), 1 + (seedFromString(spec.last) % 27)),
+      },
+      select: { id: true },
+    });
+    createdAthletes.push({ id: athlete.id, spec });
+
+    const consentStatus = (spec.archetype === "CONSENT_RESTRICTED" ? "RESTRICTED" : "GRANTED") as "RESTRICTED" | "GRANTED";
+    await prisma.consentRecord.create({
+      data: {
+        athleteId: athlete.id,
+        consentType: "Data Sharing",
+        status: consentStatus,
+        grantedAt: hAgo(40 * 24),
+        reason:
+          consentStatus === "RESTRICTED"
+            ? "Restricted by athlete request pending consent re-evaluation (synthetic)."
+            : "Baseline demo consent for synthetic data.",
+        grantedBy: users.ADMIN,
+      },
+    });
+  }
+
+  // History window: 28 days; scoring window: last 14 days.
+  const HISTORY_DAYS = 28;
+  const SCORE_DAYS = 14;
+
+  // Low-baseline athletes get only 5 days of observations (INSUFFICIENT_BASELINE).
+  const observationRows: ObsDraft[] = [];
+  const latestDayIds: Record<string, Partial<Record<MetricKey, string>>> = {};
+  // Per athlete: day entries ordered oldest → newest with their offset.
+  const perAthleteDayObs: Map<string, { daysAgo: number; obs: ObsDraft[] }[]> = new Map();
+
+  for (const { id: athleteId, spec } of createdAthletes) {
+    const rnd = mulberry32(seedFromString(spec.externalId));
+    const days: { daysAgo: number; obs: ObsDraft[] }[] = [];
+    const totalDays = spec.archetype === "LOW_BASELINE" ? 5 : HISTORY_DAYS;
+    // Bias profile: the first half of the window is neutral history that
+    // establishes the baseline; the scoring window ramps per archetype so
+    // READY athletes trend up, suppressed-recovery athletes trend down.
+    const biasFor = (d: number): number => {
+      if (d >= 14 || spec.archetype === "LOW_BASELINE") return 0;
+      const ramp = 1 - d / 14; // 1 today → ~0 fourteen days ago
+      switch (spec.archetype) {
+        case "VALID_READY": return 0.95 * ramp;
+        case "ORDINARY": return 0.55 * ramp;
+        case "VALID_MONITOR": return -0.15 * ramp;
+        case "LOAD_SPIKE": return -0.18 * ramp;
+        default: return 0;
+      }
+    };
+    for (let d = totalDays - 1; d >= 0; d--) {
+      const day = dayStart(d);
+      const dow = day.getUTCDay();
+      const scoringWindow = d < 14 && spec.archetype !== "LOW_BASELINE";
+      const game = dow === 0 && d > 1;
+      // Controlled-valid and load-spike demo athletes train daily in the
+      // scoring window so their latest day carries a full workload capture.
+      const practice = scoringWindow && (spec.archetype === "VALID_READY" || spec.archetype === "LOAD_SPIKE")
+        ? true
+        : !game && dow !== 2 && dow !== 4 && rnd() > 0.25;
+      const travel = d % 9 === 0 && spec.archetype !== "LOW_BASELINE";
+      const heat = d % 11 === 0;
+      const forceBad = spec.archetype === "MULTI_FAIL" && d <= 2;
+      const invalidHeavy = spec.archetype === "MULTI_FAIL" && d === 1;
+      const obs = genDay(spec, athleteId, dsIds, deviceByArchetype, day, rnd, { game, practice, travel, heat, forceBad, invalidHeavy, bias: biasFor(d) });
+      days.push({ daysAgo: d, obs });
+      observationRows.push(...obs);
+    }
+    perAthleteDayObs.set(athleteId, days);
+  }
+
+  // Bulk insert observations (chunks to stay within parameter limits).
+  const chunkSize = 4000;
+  for (let i = 0; i < observationRows.length; i += chunkSize) {
+    await prisma.observation.createMany({ data: observationRows.slice(i, i + chunkSize) });
+  }
+  console.log(`Inserted ${observationRows.length} synthetic observations.`);
+
+  // Link provenance ids for the latest day per athlete (parallel re-query).
+  await mapChunks(createdAthletes, 12, async ({ id: athleteId }) => {
+    const days = perAthleteDayObs.get(athleteId) ?? [];
+    const lastEntry = days[days.length - 1];
+    if (!lastEntry || lastEntry.obs.length === 0) return;
+    const startTs = new Date(lastEntry.obs[0].timestamp.getTime() - 3600 * 1000);
+    const rows = await prisma.observation.findMany({
+      where: { athleteId, timestamp: { gte: startTs } },
+      select: { id: true, type: true },
+    });
+    const map: Partial<Record<MetricKey, string>> = {};
+    for (const r of rows) map[r.type as MetricKey] = r.id;
+    latestDayIds[athleteId] = map;
+  });
+
+  // ---- Baselines per athlete from history ----
+  const baselineIdFor: Record<string, string> = {};
+  const baselineRows: {
+    athleteId: string;
+    baselineType: string;
+    startDate: Date;
+    endDate: Date;
+    status: string;
+    version: number;
+    notes: string;
+    obs: { observationType: string; value: number; unit: string; metadata: Prisma.InputJsonValue }[];
+  }[] = [];
+  for (const { id: athleteId, spec } of createdAthleteSpecs(createdAthletes)) {
+    const days = perAthleteDayObs.get(athleteId) ?? [];
+    const history: MetricSnapshot[] = [];
+    for (const entry of days.slice(0, -1)) {
+      for (const o of entry.obs) {
+        history.push({
+          metric: o.type as MetricKey,
+          value: o.value,
+          unit: o.unit,
+          timestamp: iso(o.timestamp),
+          signalQuality: Number((o.metadata as Record<string, unknown>).signalQuality ?? 0.9),
+          isValid: o.isValid,
+          source: "SYNTHETIC",
+        });
+      }
+    }
+    const baselineMetrics: MetricKey[] = ["RESP_RATE", "VENT_EFF", "SPO2", "VO2_PROXY", "HRV_MS", "RHR", "SLEEP_H", "LOAD_AU", "JUMP_CM"];
+    const bl = buildBaselines(history, baselineMetrics, 28, 8, NOW);
+    const rows = bl
+      .filter((b) => !Number.isNaN(b.p10))
+      .map((b) => ({
+        observationType: b.metric,
+        value: b.p50,
+        unit: "",
+        metadata: { p10: b.p10, p50: b.p50, p90: b.p90, n: b.n, windowDays: b.windowDays } as unknown as Prisma.InputJsonValue,
+      }));
+    const status = rows.length === 0 || bl.every((b) => b.n < 8) ? "INSUFFICIENT_DATA" : "ACTIVE";
+    baselineRows.push({
+      athleteId,
+      baselineType: "PERFORMANCE",
+      startDate: dayStart(28),
+      endDate: NOW,
+      status,
+      version: 1,
+      notes: `Rolling 28-day synthetic baseline for ${spec.externalId}.`,
+      obs: rows,
+    });
+  }
+  await mapChunks(baselineRows, 10, async (b) => {
+    const created = await prisma.athleteBaseline.create({
+      data: {
+        athleteId: b.athleteId,
+        baselineType: b.baselineType,
+        startDate: b.startDate,
+        endDate: b.endDate,
+        status: b.status as "ACTIVE" | "ARCHIVED" | "PENDING" | "INSUFFICIENT_DATA",
+        version: b.version,
+        notes: b.notes,
+        baselineObservations: { create: b.obs },
+      },
+      select: { id: true },
+    });
+    baselineIdFor[b.athleteId] = created.id;
+  });
+  console.log(`Created ${baselineRows.length} athlete baselines.`);
+
+  // ---- Scoring: run the REAL engine over the last 14 days ----
+  // Evaluation semantics: each historical day is scored as it would have been
+  // at that day's end (now = start of the following day). Calibration age and
+  // capture freshness are therefore relative to that day, not to seed time.
+  let scoreCount = 0;
+  let withheldCount = 0;
+
+  const scoreOneAthlete = async ({ id: athleteId, spec }: { id: string; spec: AthleteSpec }) => {
+    const days = perAthleteDayObs.get(athleteId) ?? [];
+    const scoringDays = days.slice(-SCORE_DAYS);
+    const consent: ScoringInput["consent"] = spec.archetype === "CONSENT_RESTRICTED" ? "RESTRICTED" : "GRANTED";
+    const calH = spec.archetype === "STALE_CAL" ? 60 : spec.archetype === "MULTI_FAIL" ? 72 : 8;
+    const calStatus = spec.archetype === "MULTI_FAIL" ? "Expired" : "OK";
+    const deviceSerial = calDev(spec);
+    const deviceKey = deviceByArchetype[spec.archetype] ?? deviceByArchetype.ORDINARY;
+
+    const baselineRowsForAthlete = baselineRows.find((b) => b.athleteId === athleteId);
+    const baselinesForEngine = (baselineRowsForAthlete?.obs ?? []).map((o) => {
+      const meta = o.metadata as { p10?: number; p50?: number; p90?: number; n?: number; windowDays?: number };
+      return {
+        metric: o.observationType as MetricKey,
+        p10: meta.p10 ?? NaN,
+        p50: meta.p50 ?? NaN,
+        p90: meta.p90 ?? NaN,
+        n: meta.n ?? 0,
+        windowDays: meta.windowDays ?? 28,
+      };
+    });
+
+    let prior: Record<string, number> | null = null;
+    let local = 0;
+    let localWithheld = 0;
+    for (const entry of scoringDays) {
+      const dayObs = entry.obs;
+      if (dayObs.length === 0) continue;
+      const dayDate = dayStart(entry.daysAgo);
+      // Evaluation clock: end of the scoring day (start of the next day).
+      const evaluationNow = dayStart(entry.daysAgo - 1);
+      // Calibration relative to the capture day so historical gates stay honest.
+      const calibratedAt = new Date(dayDate.getTime() + 14 * 3600 * 1000 - calH * 3600 * 1000);
+      const cal = {
+        deviceId: deviceKey,
+        deviceLabel: deviceLabelFor(deviceSerial),
+        calibratedAt: iso(calibratedAt),
+        status: calStatus,
+      };
+      const scoringDate = iso(dayDate);
+      const observations: MetricSnapshot[] = dayObs.map((o) => ({
+        metric: o.type as MetricKey,
+        value: o.value,
+        unit: o.unit,
+        timestamp: iso(o.timestamp),
+        signalQuality: Number((o.metadata as Record<string, unknown>).signalQuality ?? 0.9),
+        isValid: o.isValid,
+        source: "SYNTHETIC",
+        maskWearMinutes: (o.metadata as Record<string, unknown>).maskWearMinutes as number | undefined,
+      }));
+      const weights = weightsForPosition(spec.position);
+      const input: ScoringInput = {
+        athleteId,
+        position: spec.position,
+        scoringDate,
+        weights: weights as unknown as Record<string, number>,
+        observations,
+        baselines: baselinesForEngine,
+        consent,
+        calibration: cal,
+        now: iso(evaluationNow),
+        priorContributions: prior,
+      };
+      const result = computeScore(input);
+      await persistScore(input, result, {
+        performanceModelId: model.id,
+        modelConfigurationVersionId: modelVersion.id,
+        athleteBaselineId: baselineIdFor[athleteId] ?? null,
+        observationIdsByMetric: entry.daysAgo === 0 ? latestDayIds[athleteId] ?? {} : {},
+      });
+      prior = Object.fromEntries(
+        result.components.filter((c) => c.contribution !== null).map((c) => [c.component, c.contribution as number]),
+      );
+      local += 1;
+      if (result.score === null) localWithheld += 1;
+    }
+    return { local, localWithheld };
+  };
+
+  const results = await mapChunks(createdAthleteSpecs(createdAthletes), 8, scoreOneAthlete);
+  scoreCount = results.reduce((acc, r) => acc + (r ? r.local : 0), 0);
+  withheldCount = results.reduce((acc, r) => acc + (r ? r.localWithheld : 0), 0);
+  console.log(`Created ${scoreCount} performance scores (${withheldCount} withheld by validity gates).`);
+
+  // ---- 8. Training sessions + football contexts (last 14 days) ----
+  await mapChunks(createdAthleteSpecs(createdAthletes), 8, async ({ id: athleteId, spec }) => {
+    const rnd = mulberry32(seedFromString(spec.externalId + ":sessions"));
+    let local = 0;
+    for (let d = 0; d < 14; d += 2) {
+      const day = dayStart(d);
+      const dow = day.getUTCDay();
+      const type = (dow === 0 ? "GAME" : dow === 2 ? "RECOVERY" : d % 9 === 0 ? "TRAVEL" : "PRACTICE") as
+        | "PRACTICE" | "GAME" | "RECOVERY" | "TESTING" | "TRAVEL";
+      const created = await prisma.trainingSession.create({
+        data: {
+          athleteId,
+          sessionType: type,
+          date: day,
+          durationMinutes: type === "GAME" ? 180 : type === "RECOVERY" ? 45 : 90 + Math.round(rnd() * 30),
+          intensity: type === "GAME" ? "High" : rnd() > 0.5 ? "Medium" : "High",
+          description: `Synthetic ${type.toLowerCase()} session.`,
+        },
+        select: { id: true },
+      });
+      local += 1;
+      await prisma.footballContext.create({
+        data: {
+          athleteId,
+          trainingSessionId: created.id,
+          opponent: type === "GAME" ? ["Ironmark Rival A", "Ironmark Rival B", "Cross-town Club"][(d / 2) % 3] : null,
+          quarter: type === "GAME" ? 1 + Math.round(rnd() * 3) : null,
+          drive: type === "GAME" ? 1 + Math.round(rnd() * 10) : null,
+          drill: type === "PRACTICE" ? ["Team Install", "Red Zone", "Special Teams", "Conditioning"][d % 4] : null,
+          repetition: type === "PRACTICE" ? 1 + Math.round(rnd() * 12) : null,
+          venue: teams[spec.team].name + " Field",
+          surface: rnd() > 0.3 ? "Grass" : "Turf",
+          isIndoor: rnd() > 0.7,
+          temperature: 16 + Math.round(rnd() * 18),
+          humidity: 30 + Math.round(rnd() * 50),
+          airQualityIndex: 15 + Math.round(rnd() * 70),
+          altitude: 100 + Math.round(rnd() * 400),
+          travelLeg: type === "TRAVEL" ? "Away leg (synthetic)" : null,
+          timeZoneChangeHrs: type === "TRAVEL" ? 5 : null,
+          daysSinceTravel: d % 9 === 0 ? 0 : d % 9,
+        },
+      });
+    }
+    return local;
+  });
+  console.log(`Created training sessions with football contexts.`);
+
+  // ---- 9. Interventions + reviews (edge cases) ----
+  const athleteByExternal = new Map(createdAthletes.map((a) => [a.spec.externalId, a.id]));
+  async function makeIntervention(
+    externalId: string,
+    exceptionKey: string,
+    description: string,
+    recommendation: string,
+    priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+    status: "OPEN" | "ASSIGNED" | "UNDER_REVIEW" | "FOLLOW_UP_REQUIRED" | "RESOLVED" | "DISMISSED",
+    assignedTo?: string,
+  ) {
+    const athleteId = athleteByExternal.get(externalId);
+    if (!athleteId) return;
+    const teamId = teams[0].id;
+    const created = await prisma.intervention.create({
+      data: {
+        teamId,
+        athleteId,
+        exceptionKey,
+        description,
+        recommendation,
+        priority,
+        status,
+        assignedTo: assignedTo ?? (status === "OPEN" ? null : users.PERFORMANCE),
+        suggestedWindow: priority === "CRITICAL" ? "Next 24h" : "Next 48h",
+        triggeringScoreId: null,
+      },
+      select: { id: true },
+    });
+    if (status !== "OPEN") {
+      await prisma.interventionReview.create({
+        data: {
+          interventionId: created.id,
+          reviewerId: users.PERFORMANCE,
+          statusChangeTo: status,
+          notes: "Synthetic demo review.",
+          followUpAction: recommendation,
+        },
+      });
+    }
+    return created;
+  }
+
+  await makeIntervention("EC-11", "MULTI_FAIL", "Multiple failed validity checks: calibration expired, sample integrity low.", "Request validation retest with recalibrated device.", "CRITICAL", "OPEN");
+  await makeIntervention("EC-01", "CALIBRATION_STALE", "Device calibration older than 48h for QB capture.", "Inspect respiratory device calibration before next capture.", "HIGH", "OPEN");
+  await makeIntervention("EC-12", "CONSENT_RESTRICTED", "Data access restricted by athlete; composite withheld.", "Confirm consent state with governance before next session.", "HIGH", "OPEN");
+  await makeIntervention("EC-07", "LOAD_SPIKE", "Acute:chronic workload ratio above 1.5 threshold.", "Suggested recovery audit with performance staff.", "MEDIUM", "UNDER_REVIEW", users.PERFORMANCE);
+  await makeIntervention("EC-07", "RECOVERY_REVIEW", "Prolonged suppressed recovery metrics.", "Human review of recovery trend and sleep context.", "MEDIUM", "FOLLOW_UP_REQUIRED", users.PERFORMANCE);
+  const smithInt = await makeIntervention("EC-15", "RETEST_REQUESTED", "Requested validation retest after stale capture.", "Retest completed with fresh calibration.", "MEDIUM", "RESOLVED", users.PERFORMANCE);
+  if (smithInt) {
+    await prisma.interventionReview.create({
+      data: {
+        interventionId: smithInt.id,
+        reviewerId: users.MEDICAL,
+        statusChangeTo: "RESOLVED",
+        notes: "Retest valid; composite restored.",
+        followUpAction: "No further follow-up.",
+      },
+    });
+  }
+  console.log("Created interventions and reviews.");
+
+  // ---- 10. Import jobs (one clean, one failing — Data Quality demo) ----
+  await prisma.importJob.create({
+    data: {
+      dataSourceId: ds["CSV Import"],
+      fileName: "demo_observations_week3.csv",
+      status: "COMPLETED",
+      totalRows: 480,
+      processedRows: 480,
+      errorRows: 0,
+      log: { summary: "All rows valid (synthetic demo import)." } as Prisma.InputJsonValue,
+      importedBy: users.PERFORMANCE,
+    },
+  });
+  await prisma.importJob.create({
+    data: {
+      dataSourceId: ds["CSV Import"],
+      fileName: "demo_bad_units.csv",
+      status: "PARTIAL_SUCCESS",
+      totalRows: 120,
+      processedRows: 96,
+      errorRows: 24,
+      log: {
+        summary: "24 rows rejected: inconsistent units (bpm vs brpm) and unknown metric key.",
+        rejectedSample: [
+          { row: 17, reason: "UNIT_MISMATCH", detail: "RESP_RATE expects brpm, got bpm" },
+          { row: 42, reason: "UNKNOWN_METRIC", detail: "metricKey 'breatheRate' not in catalog" },
+        ],
+      } as Prisma.InputJsonValue,
+      importedBy: users.PERFORMANCE,
+    },
+  });
+
+  // ---- 11. Reports ----
+  await prisma.report.create({
+    data: {
+      name: "Team Readiness Summary — Week 3",
+      reportType: "TEAM_SUMMARY",
+      parameters: { teamId: teams[0].id, periodDays: 7 } as unknown as Prisma.InputJsonValue,
+      generatedBy: users.PERFORMANCE,
+      status: "COMPLETED",
+    },
+  });
+  await prisma.report.create({
+    data: {
+      name: "Data Quality Review — Import Failures",
+      reportType: "DATA_QUALITY",
+      parameters: { windowDays: 14 } as unknown as Prisma.InputJsonValue,
+      generatedBy: users.ADMIN,
+      status: "COMPLETED",
+    },
+  });
+
+  // ---- 12. Audit log (sensitive events, tamper-evident chain) ----
+  const { audit } = await import("../src/lib/services/audit");
+  await audit({
+    userId: users.ADMIN,
+    action: "SEED_CREATE",
+    entityType: "System",
+    entityId: null,
+    newValue: { note: "Deterministic synthetic seed applied (demo environment)." },
+    ipAddress: "127.0.0.1",
+  });
+  await audit({
+    userId: users.MEDICAL,
+    action: "CONSENT_RESTRICTED",
+    entityType: "Athlete",
+    entityId: athleteByExternal.get("EC-12") ?? null,
+    newValue: { consent: "RESTRICTED", reason: "Athlete-requested restriction (synthetic demo)." },
+    ipAddress: "127.0.0.1",
+  });
+  await audit({
+    userId: users.PERFORMANCE,
+    action: "SCORE_RECALCULATED",
+    entityType: "Athlete",
+    entityId: athleteByExternal.get("EC-07") ?? null,
+    newValue: { trigger: "LOAD_SPIKE", acwr: 1.72 },
+    ipAddress: "127.0.0.1",
+  });
+  await audit({
+    userId: users.MEDICAL,
+    action: "INTERVENTION_RESOLVED",
+    entityType: "Intervention",
+    entityId: smithInt?.id ?? null,
+    newValue: { status: "RESOLVED", note: "Retest valid." },
+    ipAddress: "127.0.0.1",
+  });
+
+  console.log("Seed complete.");
+  console.log(`Teams: ${teams.length} · Athletes: ${createdAthletes.length} · Scores: ${scoreCount} (withheld ${withheldCount})`);
+  console.log("DEMO CREDENTIALS (development only — all accounts use this password):");
+  console.log("  Password: Demo-SMX-2024!");
+  for (const u of usersSpec) console.log(`  ${u.role.padEnd(11)} ${u.email}`);
+  await prisma.$disconnect();
+}
+
+// helpers used above
+function createdAthleteSpecs(list: { id: string; spec: AthleteSpec }[]) {
+  return list.map(({ id, spec }) => ({ id, spec }));
+}
+
+/** Parallel map over chunks; keeps pool pressure bounded and preserves order. */
+async function mapChunks<TIn, TOut>(
+  items: TIn[],
+  chunk: number,
+  fn: (item: TIn) => Promise<TOut>,
+): Promise<TOut[]> {
+  const out: TOut[] = [];
+  for (let i = 0; i < items.length; i += chunk) {
+    out.push(...await Promise.all(items.slice(i, i + chunk).map(fn)));
+  }
+  return out;
+}
+function calDev(spec: AthleteSpec): string {
+  const map: Record<string, string> = {
+    STALE_CAL: "DEV-012",
+    MULTI_FAIL: "DEV-013",
+    ORDINARY: "DEV-010",
+    VALID_READY: "DEV-010",
+    VALID_MONITOR: "DEV-011",
+    LOAD_SPIKE: "DEV-011",
+    CONSENT_RESTRICTED: "DEV-010",
+    LOW_BASELINE: "DEV-014",
+  };
+  return map[spec.archetype] ?? "DEV-010";
+}
+function deviceLabelFor(serial: string): string {
+  const defs: Record<string, string> = {
+    "DEV-010": "O2-MASK-V1 (RespiroCorp)",
+    "DEV-011": "CHEST-STRAP-X (BioFit)",
+    "DEV-012": "O2-MASK-V1 (RespiroCorp)",
+    "DEV-013": "O2-MASK-V1 (RespiroCorp)",
+    "DEV-014": "GPS-POD-G3 (FieldSense)",
+    "DEV-015": "ENV-STATION-1 (Aeris Labs)",
+  };
+  return defs[serial] ?? serial;
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

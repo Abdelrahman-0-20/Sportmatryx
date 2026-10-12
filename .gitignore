@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+.pnpm-store/
+.npm_cache/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# production
+build/
+dist/
+
+# local database (embedded PostgreSQL)
+.pgdata/
+.pgdata.log
+.tools/
+
+# environment
+.env
+.env*.local
+
+# docs scratch space
+.tmpdocx/
+
+# testing
+coverage/
+test-results/
+playwright-report/
+.vitest/
+
+# misc
+*.log
+.DS_Store
+tsconfig.tsbuildinfo

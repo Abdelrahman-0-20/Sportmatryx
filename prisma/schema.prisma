@@ -1,0 +1,604 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Authentication and Authorization
+model User {
+  id            String         @id @default(cuid())
+  name          String?
+  email         String?        @unique
+  emailVerified DateTime?
+  image         String?
+  hashedPassword String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  role          Role           @default(ATHLETE)
+  accounts      Account[]
+  sessions      Session[]
+  memberships   TeamMembership[]
+  auditLogs     AuditLog[]
+  interventionReviews InterventionReview[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+enum Role {
+  ATHLETE
+  PERFORMANCE
+  MEDICAL
+  COACH
+  EXECUTIVE
+  ADMIN
+}
+
+// Teams and Athletes
+model Team {
+  id           String         @id @default(cuid())
+  name         String         @unique
+  description  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  memberships  TeamMembership[]
+  athletes     Athlete[]
+  interventions Intervention[]
+
+  @@map("teams")
+}
+
+model TeamMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  teamId    String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@map("team_memberships")
+}
+
+model Athlete {
+  id                   String                 @id @default(cuid())
+  externalId           String?                @unique // e.g., jersey number, external system ID
+  firstName            String
+  lastName             String
+  teamId               String
+  position             PositionType
+  rosterRole           String? // e.g., Starter, Practice Squad
+  isActive             Boolean                @default(true)
+  dateOfBirth          DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  consentRecords       ConsentRecord[]
+  observations         Observation[]
+  trainingSessions     TrainingSession[]
+  athleteBaselines     AthleteBaseline[]
+  performanceScores    PerformanceScore[]
+  interventions        Intervention[]
+  footballContexts     FootballContext[] // Contexts where this athlete was involved
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("athletes")
+}
+
+enum PositionType {
+  QB
+  SKILL
+  TRENCH
+  LB_TE
+  ST
+  OTHER
+}
+
+model ConsentRecord {
+  id           String        @id @default(cuid())
+  athleteId    String
+  consentType  String // e.g., "Data Sharing", "Medical Information"
+  status       ConsentStatus @default(GRANTED)
+  grantedAt    DateTime      @default(now())
+  revokedAt    DateTime?
+  grantedBy    String? // User ID or system that granted consent
+  reason       String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@map("consent_records")
+}
+
+enum ConsentStatus {
+  GRANTED
+  RESTRICTED
+  REVOKED
+}
+
+// Configuration
+model PositionConfiguration {
+  id                   String                   @id @default(cuid())
+  positionType         PositionType             @unique
+  description          String?
+  defaultModelConfigId String? // Reference to a specific ModelConfigurationVersion for this position
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  // For future: link to ModelConfigurationVersion if needed for defaults
+  // defaultModelConfig ModelConfigurationVersion? @relation(fields: [defaultModelConfigId], references: [id])
+
+  @@map("position_configurations")
+}
+
+// Devices and Data Ingestion
+model Device {
+  id              String            @id @default(cuid())
+  serialNumber    String            @unique
+  model           String
+  manufacturer    String
+  type            String // e.g., "Respiratory Mask", "Chest Strap", "GPS"
+  description     String?
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  calibrationRecords CalibrationRecord[]
+  observations    Observation[]
+
+  @@map("devices")
+}
+
+model CalibrationRecord {
+  id           String    @id @default(cuid())
+  deviceId     String
+  calibrationDate DateTime
+  nextCalibrationDate DateTime?
+  status       String // e.g., "OK", "Expired", "Pending"
+  performedBy  String? // User ID
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@map("calibration_records")
+}
+
+model Observation {
+  id            String    @id @default(cuid())
+  athleteId     String
+  dataSourceId  String
+  deviceId      String?
+  timestamp     DateTime
+  type          String // e.g., "HR", "SpO2", "Workload", "Sleep"
+  value         Float // Main numerical value
+  unit          String?
+  metadata      Json? // Additional context like raw data, sensor specific flags
+  isValid       Boolean   @default(true) // Initial data quality flag
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  scoreComponents ScoreComponent[]
+
+  athlete    Athlete    @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  dataSource DataSource @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+  device     Device?    @relation(fields: [deviceId], references: [id])
+
+  @@map("observations")
+}
+
+model DataSource {
+  id            String    @id @default(cuid())
+  name          String    @unique // e.g., "Manual Entry", "CSV Import", "Device Stream XYZ"
+  type          String // e.g., "MANUAL", "FILE_UPLOAD", "API", "DEVICE_INTEGRATION"
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  observations  Observation[]
+  importJobs    ImportJob[]
+
+  @@map("data_sources")
+}
+
+model ImportJob {
+  id            String      @id @default(cuid())
+  dataSourceId  String
+  fileName      String?
+  status        ImportStatus @default(PENDING)
+  totalRows     Int?
+  processedRows Int?
+  errorRows     Int?
+  log           Json? // Detailed log of import process, errors
+  importedBy    String? // User ID
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  dataSource DataSource @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+
+  @@map("import_jobs")
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  PARTIAL_SUCCESS
+}
+
+// Training and Context
+model TrainingSession {
+  id             String          @id @default(cuid())
+  athleteId      String
+  sessionType    SessionType     @default(PRACTICE)
+  date           DateTime
+  durationMinutes Int?
+  intensity      String? // e.g., "Low", "Medium", "High"
+  description    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  footballContexts FootballContext[]
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@map("training_sessions")
+}
+
+enum SessionType {
+  PRACTICE
+  GAME
+  RECOVERY
+  TESTING
+  TRAVEL
+}
+
+model FootballContext {
+  id                String          @id @default(cuid())
+  athleteId         String?
+  trainingSessionId String?
+  // Game Context
+  gameId            String?
+  opponent          String?
+  quarter           Int?
+  drive             Int?
+  snap              Int?
+  // Practice Context
+  drill             String?
+  repetition        Int?
+  // Environmental Context
+  venue             String?
+  surface           String?
+  isIndoor          Boolean?
+  temperature       Float?
+  humidity          Float?
+  airQualityIndex   Float?
+  altitude          Float?
+  // Travel Context
+  travelLeg         String?
+  timeZoneChangeHrs Float?
+  daysSinceTravel   Int?
+  // Other
+  sensorConfig      String? // JSON string of sensor configuration used
+  returnToPlayContext String? // Relevant for medical staff
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  athlete        Athlete?        @relation(fields: [athleteId], references: [id])
+  trainingSession TrainingSession? @relation(fields: [trainingSessionId], references: [id])
+
+  @@map("football_contexts")
+}
+
+// Baselines
+model AthleteBaseline {
+  id                  String             @id @default(cuid())
+  athleteId           String
+  baselineType        String // e.g., "Respiratory", "HRV", "General Performance"
+  startDate           DateTime
+  endDate             DateTime
+  status              BaselineStatus     @default(ACTIVE)
+  version             Int                @default(1)
+  notes               String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  baselineObservations BaselineObservation[]
+  performanceScores   PerformanceScore[] // Scores that used this baseline
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@map("athlete_baselines")
+}
+
+enum BaselineStatus {
+  ACTIVE
+  ARCHIVED
+  PENDING
+  INSUFFICIENT_DATA
+}
+
+model BaselineObservation {
+  id              String          @id @default(cuid())
+  athleteBaselineId String
+  observationType String // e.g., "Avg_HR", "Min_SpO2", "VO2_Peak"
+  value           Float
+  unit            String?
+  metadata        Json? // e.g., StdDev, min/max range
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  athleteBaseline AthleteBaseline @relation(fields: [athleteBaselineId], references: [id], onDelete: Cascade)
+
+  @@map("baseline_observations")
+}
+
+// Performance Scoring
+model PerformanceModel {
+  id                      String                    @id @default(cuid())
+  name                    String                    @unique // e.g., "SMX Performance Index"
+  description             String?
+  isActive                Boolean                   @default(true)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  modelConfigurationVersions ModelConfigurationVersion[]
+  performanceScores       PerformanceScore[]
+
+  @@map("performance_models")
+}
+
+model ModelConfigurationVersion {
+  id               String               @id @default(cuid())
+  performanceModelId String
+  versionNumber    Int
+  isActive         Boolean              @default(true)
+  weights          Json                 // JSON object of component weights { "Respiratory Efficiency": 0.2, ... }
+  normalizationRules Json?              // JSON object of normalization rules for components
+  validityRules    Json?              // JSON object of rules for validity gating
+  effectiveFrom    DateTime             @default(now())
+  effectiveTo      DateTime?
+  createdBy        String? // User ID
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  performanceScores PerformanceScore[]
+
+  performanceModel PerformanceModel @relation(fields: [performanceModelId], references: [id], onDelete: Cascade)
+
+  @@unique([performanceModelId, versionNumber])
+  @@map("model_configuration_versions")
+}
+
+model PerformanceScore {
+  id                           String                      @id @default(cuid())
+  athleteId                    String
+  performanceModelId           String
+  modelConfigurationVersionId  String
+  athleteBaselineId            String? // Baseline used for this score
+  timestamp                    DateTime                    @default(now()) // When the score was calculated
+  score                        Float? // The composite score (e.g., 0-100)
+  scoreBand                    String? // e.g., "Excellent", "Good", "Monitor"
+  confidence                   Float? // 0-1 confidence score
+  validityStatus               ValidityStatus              @default(INSUFFICIENT_DATA)
+  validityReason               String? // Detailed reason for validity status
+  explanation                  String? // High-level explanation of the score
+  createdAt                    DateTime                    @default(now())
+  updatedAt                    DateTime                    @updatedAt
+  scoreComponents              ScoreComponent[]
+  scoreDrivers                 ScoreDriver[]
+  validityChecks               ValidityCheck[]
+
+  athlete                    Athlete                   @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  performanceModel           PerformanceModel          @relation(fields: [performanceModelId], references: [id], onDelete: Cascade)
+  modelConfigurationVersion  ModelConfigurationVersion @relation(fields: [modelConfigurationVersionId], references: [id], onDelete: Cascade)
+  athleteBaseline            AthleteBaseline?          @relation(fields: [athleteBaselineId], references: [id])
+
+  @@map("performance_scores")
+}
+
+enum ValidityStatus {
+  VALID
+  LIMITED
+  WITHHELD
+  RETEST
+  INSUFFICIENT_BASELINE
+  INSUFFICIENT_DATA // General placeholder for any missing data
+}
+
+model ScoreComponent {
+  id                   String        @id @default(cuid())
+  performanceScoreId   String
+  observationId        String? // Link to the specific observation contributing most directly
+  componentName        String // e.g., "Respiratory Efficiency", "Oxygen Function"
+  normalizedValue      Float // Value after normalization (e.g., 0-1)
+  originalValue        Float? // Original raw value if applicable
+  originalUnit         String?
+  weightApplied        Float // Weight used from the model configuration
+  contributionToScore  Float // How much this component contributed to the final score
+  validityStatus       ValidityStatus @default(INSUFFICIENT_DATA)
+  validityReason       String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  performanceScore PerformanceScore @relation(fields: [performanceScoreId], references: [id], onDelete: Cascade)
+  observation      Observation?     @relation(fields: [observationId], references: [id])
+
+  @@map("score_components")
+}
+
+model ScoreDriver {
+  id                 String    @id @default(cuid())
+  performanceScoreId String
+  driverType         DriverType // POSITIVE, NEGATIVE
+  description        String // e.g., "HRV +12% vs Baseline", "Heat Index 36C penalty"
+  strength           Float? // Magnitude of impact
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  performanceScore PerformanceScore @relation(fields: [performanceScoreId], references: [id], onDelete: Cascade)
+
+  @@map("score_drivers")
+}
+
+enum DriverType {
+  POSITIVE
+  NEGATIVE
+}
+
+model ValidityCheck {
+  id                 String          @id @default(cuid())
+  performanceScoreId String
+  checkName          String // e.g., "Source Integrity", "Observation Completeness", "Calibration Freshness"
+  status             ValidityCheckStatus @default(FAILED)
+  reason             String?
+  details            Json? // Additional details about the check (e.g., specific missing fields)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  performanceScore PerformanceScore @relation(fields: [performanceScoreId], references: [id], onDelete: Cascade)
+
+  @@map("validity_checks")
+}
+
+enum ValidityCheckStatus {
+  PASSED
+  FAILED
+  WARNING
+  NOT_APPLICABLE
+}
+
+// Interventions and Reviews
+model Intervention {
+  id            String             @id @default(cuid())
+  teamId        String
+  athleteId     String
+  triggeringScoreId String? // Optional: link to a specific PerformanceScore that triggered this
+  exceptionKey  String // e.g., "EC-11 (MULTI_FAIL)", "CALIBRATION_STALE"
+  description   String // Detailed explanation of the intervention need
+  recommendation String? // Suggested follow-up action
+  priority      InterventionPriority @default(MEDIUM)
+  status        InterventionStatus @default(OPEN)
+  assignedTo    String? // User ID of the assigned reviewer
+  suggestedWindow String? // e.g., "Next 24h", "Before next capture"
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  reviews       InterventionReview[]
+
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  // triggeringScore PerformanceScore? @relation(fields: [triggeringScoreId], references: [id])
+
+  @@map("interventions")
+}
+
+enum InterventionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum InterventionStatus {
+  OPEN
+  ASSIGNED
+  UNDER_REVIEW
+  FOLLOW_UP_REQUIRED
+  RESOLVED
+  DISMISSED
+}
+
+model InterventionReview {
+  id             String    @id @default(cuid())
+  interventionId String
+  reviewerId     String // User ID of the reviewer
+  reviewDate     DateTime  @default(now())
+  statusChangeTo InterventionStatus
+  notes          String?
+  followUpAction String? // e.g., "Retest required", "Device check"
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  intervention Intervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+  reviewer     User         @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@map("intervention_reviews")
+}
+
+// Reporting and Audit
+model Report {
+  id            String    @id @default(cuid())
+  name          String
+  reportType    String // e.g., "Team Summary", "Athlete Performance", "Data Quality"
+  parameters    Json? // JSON object of parameters used to generate the report (e.g., date range, team ID)
+  generatedBy   String? // User ID
+  generatedAt   DateTime  @default(now())
+  filePath      String? // Path to the generated report file (e.g., PDF, CSV)
+  status        ReportStatus @default(PENDING)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("reports")
+}
+
+enum ReportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String? // User who performed the action
+  action    String // e.g., "USER_LOGIN", "ATHLETE_UPDATE", "CONSENT_REVOKED"
+  entityType String // e.g., "User", "Athlete", "ConsentRecord"
+  entityId  String? // ID of the entity affected
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  timestamp DateTime @default(now())
+  prevHash  String?  @db.Char(64) // tamper-evident chain: previous record hash
+  hash      String?  @db.Char(64) // SHA-256(prevHash ‖ canonical(record))
+  seq       Int      @default(autoincrement()) @unique // monotonic creation order
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([timestamp])
+  @@index([seq])
+  @@map("audit_logs")
+}

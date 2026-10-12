@@ -1,0 +1,253 @@
+@import "tailwindcss";
+
+/*
+ * Sportmetryx Football design tokens (PROTOTYPE design system).
+ * Dark command-center UI per the visual references.
+ */
+@theme {
+  --color-canvas: #0a1220;
+  --color-panel: #101b2e;
+  --color-panel-2: #0d1626;
+  --color-edge: #1e2d45;
+  --color-ink: #e6eef8;
+  --color-muted: #9fb4cf;
+  --color-accent: #22d3ee;
+  --color-accent-dim: #0e7490;
+  --color-ready: #22d3ee;
+  --color-monitor: #f5b83d;
+  --color-compromised: #f0616d;
+  --color-withheld: #a9bdd6;
+  --color-prototype: #8b5cf6;
+  --color-positive: #34d399;
+  --color-critical: #ef4444;
+
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+
+  /* Shared elevation (soft depth, kept subtle for the dark command-center). */
+  --shadow-card: 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-float: 0 20px 50px -20px rgb(0 0 0 / 0.65), 0 0 0 1px rgb(34 211 238 / 0.06);
+
+  --radius-card: 10px;
+}
+
+html {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+body {
+  min-height: 100dvh;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Faint athlete-silhouette + grid backdrop (pure CSS, no binary asset). */
+.app-backdrop {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(34, 211, 238, 0.06), transparent),
+    linear-gradient(rgba(30, 45, 69, 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 45, 69, 0.28) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+}
+
+.hero-number {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.display-heading {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Focus visibility for keyboard users (WCAG AA). */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}
+
+@keyframes smx-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.pulse-newest {
+  animation: smx-pulse 2.4s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   LIVE MOTION LAYER (all disabled under prefers-reduced-motion above)
+   ========================================================================== */
+
+/* Entrance: fade + rise. Stagger via .stagger > *:nth-child delays. */
+@keyframes smx-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up {
+  animation: smx-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > * {
+  animation: smx-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger > *:nth-child(2) { animation-delay: 0.09s; }
+.stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger > *:nth-child(4) { animation-delay: 0.21s; }
+.stagger > *:nth-child(5) { animation-delay: 0.27s; }
+.stagger > *:nth-child(6) { animation-delay: 0.33s; }
+.stagger > *:nth-child(7) { animation-delay: 0.39s; }
+
+/* Hero headline entrance. */
+@keyframes smx-hero-in {
+  from { opacity: 0; transform: translateY(22px) scale(0.985); letter-spacing: 0.06em; }
+  to { opacity: 1; transform: translateY(0) scale(1); letter-spacing: 0.02em; }
+}
+.hero-in {
+  animation: smx-hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hero-in-2 { animation-delay: 0.12s; }
+.hero-in-3 { animation-delay: 0.24s; }
+
+/* Cyan glow for READY pills and hero accents. */
+@keyframes smx-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.0); }
+  50% { box-shadow: 0 0 18px 2px rgba(34, 211, 238, 0.28); }
+}
+.glow-ready {
+  animation: smx-glow 3.2s ease-in-out infinite;
+}
+
+/* Sparkline draw-in. */
+@keyframes smx-draw {
+  from { stroke-dashoffset: var(--smx-len, 300); }
+  to { stroke-dashoffset: 0; }
+}
+.sparkline path {
+  stroke-dasharray: var(--smx-len, 300);
+  animation: smx-draw 1.1s ease-out both;
+}
+
+/* Confidence ring sweep on mount. */
+@keyframes smx-ring {
+  from { stroke-dashoffset: var(--smx-circ, 57); }
+}
+.ring-anim {
+  animation: smx-ring 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Card hover lift. */
+.card-lift {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s, box-shadow 0.25s;
+}
+.card-lift:hover {
+  transform: translateY(-3px);
+  border-color: rgba(34, 211, 238, 0.35);
+  box-shadow: 0 10px 30px -18px rgba(34, 211, 238, 0.35);
+}
+
+/* Roster row hover slide. */
+@keyframes smx-row-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.row-in {
+  animation: smx-row-in 0.4s ease-out both;
+}
+tbody.row-stagger tr:nth-child(1) { animation-delay: 0.02s; }
+tbody.row-stagger tr:nth-child(2) { animation-delay: 0.05s; }
+tbody.row-stagger tr:nth-child(3) { animation-delay: 0.08s; }
+tbody.row-stagger tr:nth-child(4) { animation-delay: 0.11s; }
+tbody.row-stagger tr:nth-child(5) { animation-delay: 0.14s; }
+tbody.row-stagger tr:nth-child(n+6) { animation-delay: 0.17s; }
+
+/* Shimmer for loading/empty states. */
+@keyframes smx-shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, rgba(30,45,69,0.4) 25%, rgba(34,211,238,0.12) 50%, rgba(30,45,69,0.4) 75%);
+  background-size: 200% 100%;
+  animation: smx-shimmer 2.2s linear infinite;
+}
+
+/* Slow ambient drift of the backdrop grid. */
+@keyframes smx-drift {
+  from { background-position: 0 0, 0 0, 0 0; }
+  to { background-position: 0 0, 48px 48px, 48px 48px; }
+}
+.app-backdrop {
+  animation: smx-drift 24s linear infinite;
+}
+
+/* Button sheen on hover. */
+@keyframes smx-sheen {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(220%); }
+}
+.btn-sheen { position: relative; overflow: hidden; }
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.btn-sheen:hover::after {
+  animation: smx-sheen 0.9s ease-out;
+}
+
+/* Live "breathing" dot for status indicators. */
+@keyframes smx-live {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.6; }
+}
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-ready);
+  animation: smx-live 1.8s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   Radix entrance utilities (tailwindcss-animate equivalents)
+   ========================================================================== */
+@keyframes smx-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes smx-zoom-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-in.fade-in-0 {
+  animation: smx-fade-in 0.15s ease-out;
+}
+.animate-in.zoom-in-95 {
+  animation: smx-zoom-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
