@@ -70,7 +70,7 @@ export async function persistScore(
   return created.id;
 }
 
-function mapValidity(
+export function mapValidity(
   v: ScoringResult["validity"],
 ): "VALID" | "LIMITED" | "WITHHELD" | "RETEST" | "INSUFFICIENT_BASELINE" | "INSUFFICIENT_DATA" {
   switch (v) {
