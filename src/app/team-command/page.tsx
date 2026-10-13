@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/ui/app-shell";
-import { Card, CardLabel, Tag, LinkButton } from "@/components/ui/primitives";
-import { requireCapability, ForbiddenError } from "@/lib/auth/rbac";
-import { UnauthorizedError } from "@/lib/auth/rbac";
+import {Card,  CardLabel, Tag, LinkButton } from "@/components/ui/primitives";
+import { ForbiddenError } from "@/lib/auth/rbac";
+import { requireReadForGuest } from "@/lib/offline";
+import { UnauthorizedError  } from "@/lib/auth/rbac";
 import { getTeamOverview } from "@/lib/services/dashboard";
 import { prisma } from "@/lib/prisma";
-import { errorToResponse } from "@/lib/auth/rbac";
+import { errorToResponse  } from "@/lib/auth/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function TeamCommandPage() {
   let overview;
   let teamName: string | null = null;
   try {
-    const user = await requireCapability("roster.read");
+    const user = await requireReadForGuest("roster.read");
     const primaryTeamId = user.memberships[0]?.teamId ?? null;
     const team = primaryTeamId ? await prisma.team.findUnique({ where: { id: primaryTeamId } }) : null;
     teamName = team?.name ?? null;

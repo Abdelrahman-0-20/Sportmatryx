@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { withFallback } from "@/lib/offline";
+import { SAMPLE_ATHLETE } from "@/lib/offline/sample-data";
 
 /** Player 360 + longitudinal services. */
 
@@ -61,6 +63,10 @@ export interface AthleteDetail {
 }
 
 export async function getAthleteDetail(athleteId: string): Promise<AthleteDetail | null> {
+  return withFallback(() => queryAthleteDetail(athleteId), () => SAMPLE_ATHLETE(athleteId));
+}
+
+async function queryAthleteDetail(athleteId: string): Promise<AthleteDetail | null> {
   const athlete = await prisma.athlete.findUnique({
     where: { id: athleteId },
     include: {

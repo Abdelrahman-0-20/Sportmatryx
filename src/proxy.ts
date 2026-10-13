@@ -6,6 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 export function proxy(request: NextRequest) {
   const hasCookie = request.cookies.has("smx_session");
+  const isGuest = request.cookies.get("smx_guest")?.value === "1";
   const { pathname } = request.nextUrl;
 
   const protectedPrefixes = [
@@ -25,7 +26,9 @@ export function proxy(request: NextRequest) {
   ];
   const isProtected = protectedPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
-  if (isProtected && !hasCookie) {
+  // Permit authenticated users AND guest visitors (offline/synthetic demo mode)
+  // onto protected read surfaces. Anonymous browsers go to login.
+  if (isProtected && !hasCookie && !isGuest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);

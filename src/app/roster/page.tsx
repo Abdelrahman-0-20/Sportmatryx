@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/ui/app-shell";
-import { Card, Tag, Sparkline, ConfidenceRing, WithheldStamp } from "@/components/ui/primitives";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {Card,  Tag, Sparkline, ConfidenceRing, WithheldStamp } from "@/components/ui/primitives";
+import {Avatar,  AvatarFallback } from "@/components/ui/avatar";
 import { initialsOf } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { requireCapability, errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
-import { getRosterRows, type RosterRow } from "@/lib/services/dashboard";
+import {Tooltip,  TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {errorToResponse,  UnauthorizedError } from "@/lib/auth/rbac";
+import { requireReadForGuest } from "@/lib/offline";
+import {getRosterRows,  type RosterRow } from "@/lib/services/dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function RosterPage({
 
   let rows: RosterRow[];
   try {
-    const user = await requireCapability("roster.read");
+    const user = await requireReadForGuest("roster.read");
     rows = await getRosterRows(user.memberships[0]?.teamId);
   } catch (e) {
     if (e instanceof UnauthorizedError) redirect("/login");

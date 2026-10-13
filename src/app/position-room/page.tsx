@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/ui/app-shell";
-import { Card, CardLabel, Tag, Sparkline, ConfidenceRing, WithheldStamp } from "@/components/ui/primitives";
-import { requireCapability, errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
-import { getRosterRows, type RosterRow } from "@/lib/services/dashboard";
+import {Card,  CardLabel, Tag, Sparkline, ConfidenceRing, WithheldStamp } from "@/components/ui/primitives";
+import {errorToResponse,  UnauthorizedError } from "@/lib/auth/rbac";
+import { requireReadForGuest } from "@/lib/offline";
+import {getRosterRows,  type RosterRow } from "@/lib/services/dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function PositionRoomPage({
 
   let rows: RosterRow[];
   try {
-    const user = await requireCapability("roster.read");
+    const user = await requireReadForGuest("roster.read");
     rows = await getRosterRows(user.memberships[0]?.teamId);
   } catch (e) {
     if (e instanceof UnauthorizedError) redirect("/login");

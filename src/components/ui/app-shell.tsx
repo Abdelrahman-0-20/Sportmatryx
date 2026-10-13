@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/auth/session";
+import { isGuest, GUEST_USER } from "@/lib/offline";
 import { SignOutButton } from "@/components/ui/sign-out";
 
 const NAV: { section: string; items: { href: string; label: string }[] }[] = [
@@ -32,7 +33,7 @@ const NAV: { section: string; items: { href: string; label: string }[] }[] = [
   },
 ];
 
-export function AppShell({
+export async function AppShell({
   children,
   crumb,
   title,
@@ -41,11 +42,18 @@ export function AppShell({
   crumb: string;
   title: string;
 }) {
+  const guest = await isGuest();
   return (
     <div className="flex min-h-dvh">
-      <Sidebar />
+      <Sidebar guest={guest} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header crumb={crumb} />
+        <Header crumb={crumb} guest={guest} />
+        {guest ? (
+          <div className="border-b border-purple-500/30 bg-prototype/15 px-4 py-2 text-center text-xs font-semibold text-purple-300 md:px-8" role="note">
+            Guest demo mode — showing SYNTHETIC SAMPLE data. No account or live database required.
+            Write actions (exports, interventions, consent) are disabled.
+          </div>
+        ) : null}
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-8">
           <h1 className="display-heading mb-1 text-3xl md:text-4xl">{title}</h1>
           {children}
@@ -59,8 +67,8 @@ export function AppShell({
   );
 }
 
-async function Sidebar() {
-  const user = await getCurrentUser();
+async function Sidebar({ guest }: { guest?: boolean }) {
+  const user = guest ? GUEST_USER : await getCurrentUser();
   return (
     <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r border-edge bg-panel-2 px-3 py-4 md:flex">
       <Link href="/" className="mb-6 block px-2">
@@ -110,7 +118,7 @@ async function Sidebar() {
   );
 }
 
-function Header({ crumb }: { crumb: string }) {
+function Header({ crumb, guest }: { crumb: string; guest?: boolean }) {
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between border-b border-edge bg-panel/90 px-4 py-2 backdrop-blur md:px-8">
       <div className="flex items-center gap-3">
@@ -121,7 +129,7 @@ function Header({ crumb }: { crumb: string }) {
       </div>
       <span className="inline-flex items-center rounded-full border border-prototype/40 bg-prototype/15 px-3 py-1 text-xs font-semibold text-purple-300">
         <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-purple-400" aria-hidden="true" />
-        Synthetic demo · PROTOTYPE
+        {guest ? "Guest · synthetic sample" : "Synthetic demo · PROTOTYPE"}
       </span>
     </header>
   );

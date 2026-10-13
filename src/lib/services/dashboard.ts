@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { withFallback } from "@/lib/offline";
+import { SAMPLE_ROSTER, SAMPLE_OVERVIEW } from "@/lib/offline/sample-data";
 
 /**
  * Team Command data services. All summaries come from persisted records —
@@ -45,6 +47,13 @@ export interface TeamOverview {
 }
 
 export async function getRosterRows(teamId?: string): Promise<RosterRow[]> {
+  return withFallback(
+    () => queryRosterRows(teamId),
+    () => [...SAMPLE_ROSTER].filter((r) => (teamId ? r.teamId === teamId : true)),
+  );
+}
+
+async function queryRosterRows(teamId?: string): Promise<RosterRow[]> {
   const teamFilter = teamId ? Prisma.sql`WHERE a."teamId" = ${teamId}` : Prisma.empty;
   const rows = await prisma.$queryRaw<
     {
@@ -125,6 +134,10 @@ export async function getRosterRows(teamId?: string): Promise<RosterRow[]> {
 }
 
 export async function getTeamOverview(teamId?: string): Promise<TeamOverview> {
+  return withFallback(() => queryTeamOverview(teamId), () => SAMPLE_OVERVIEW());
+}
+
+async function queryTeamOverview(teamId?: string): Promise<TeamOverview> {
   const roster = await getRosterRows(teamId);
   const counts = { ready: 0, monitor: 0, compromised: 0, withheld: 0 };
   for (const r of roster) {

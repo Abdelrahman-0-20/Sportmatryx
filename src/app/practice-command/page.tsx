@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/ui/app-shell";
-import { Card, Tag } from "@/components/ui/primitives";
-import { requireCapability, errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
+import {Card,  Tag } from "@/components/ui/primitives";
+import {errorToResponse,  UnauthorizedError } from "@/lib/auth/rbac";
+import { requireReadForGuest } from "@/lib/offline";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function PracticeCommandPage() {
   let rows;
   try {
-    const user = await requireCapability("score.read");
+    const user = await requireReadForGuest("score.read");
     const teamId = user.memberships[0]?.teamId;
     rows = await prisma.trainingSession.findMany({
       where: { sessionType: { in: ["PRACTICE", "TESTING"] }, ...(teamId ? { athlete: { teamId } } : {}) },

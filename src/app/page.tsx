@@ -71,12 +71,22 @@ export default function LandingPage() {
               Enter the platform
             </Link>
             <Link
+              href="/guest"
+              className="min-h-[44px] rounded-md border border-edge px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-accent/50 hover:bg-panel"
+            >
+              Continue as guest
+            </Link>
+            <Link
               href="/#modules"
               className="min-h-[44px] rounded-md border border-edge px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-accent/50 hover:bg-panel"
             >
               See the architecture
             </Link>
           </div>
+          <p className="hero-in hero-in-3 mt-3 text-xs text-muted">
+            Guest mode shows every screen with clearly-labeled synthetic sample data — no account or
+            live database required.
+          </p>
         </div>
 
         <aside aria-label="Illustrative telemetry" className="stagger flex flex-col gap-3">

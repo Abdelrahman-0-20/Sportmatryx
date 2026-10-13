@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/lib/services/audit";
+import { withFallback } from "@/lib/offline";
+import { SAMPLE_INTERVENTIONS } from "@/lib/offline/sample-data";
 import type { SessionUser } from "@/lib/auth/session";
 
 /**
@@ -34,6 +36,16 @@ export interface InterventionRow {
 }
 
 export async function listInterventions(teamId?: string, status?: string): Promise<InterventionRow[]> {
+  return withFallback(
+    () => queryInterventions(teamId, status),
+    () =>
+      [...SAMPLE_INTERVENTIONS].filter(
+        (i) => (status ? i.status === status : true) && (teamId ? i.teamId === teamId : true),
+      ),
+  );
+}
+
+async function queryInterventions(teamId?: string, status?: string): Promise<InterventionRow[]> {
   const rows = await prisma.intervention.findMany({
     where: {
       ...(teamId ? { teamId } : {}),
@@ -80,6 +92,20 @@ export interface InterventionStats {
 }
 
 export async function getInterventionStats(teamId?: string): Promise<InterventionStats> {
+  return withFallback(
+    () => queryInterventionStats(teamId),
+    () => {
+      const open = SAMPLE_INTERVENTIONS.filter((i) => ["OPEN", "ASSIGNED", "UNDER_REVIEW"].includes(i.status)).length;
+      const approved = SAMPLE_INTERVENTIONS.filter((i) => i.status === "UNDER_REVIEW").length;
+      const snoozed = SAMPLE_INTERVENTIONS.filter((i) => i.status === "FOLLOW_UP_REQUIRED").length;
+      const dismissed = SAMPLE_INTERVENTIONS.filter((i) => i.status === "DISMISSED").length;
+      const resolvedThisWeek = 1;
+      return { suggested: open, approved, snoozed, dismissed, resolvedThisWeek };
+    },
+  );
+}
+
+async function queryInterventionStats(teamId?: string): Promise<InterventionStats> {
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
   const [open, approved, snoozed, dismissed, resolved] = await Promise.all([
     prisma.intervention.count({ where: { ...(teamId ? { teamId } : {}), status: { in: ["OPEN", "ASSIGNED", "UNDER_REVIEW"] } } }),

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/ui/app-shell";
-import { Card, CardLabel, Tag, WithheldStamp, ConfidenceRing } from "@/components/ui/primitives";
-import { requireCapability, errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
+import {Card,  CardLabel, Tag, WithheldStamp, ConfidenceRing } from "@/components/ui/primitives";
+import {errorToResponse,  UnauthorizedError } from "@/lib/auth/rbac";
+import { requireReadForGuest } from "@/lib/offline";
 import { getRosterRows } from "@/lib/services/dashboard";
 import { prisma } from "@/lib/prisma";
 
@@ -16,7 +17,7 @@ export default async function GameReadinessPage() {
   let roster;
   let latestGame: { date: Date; opponent: string | null; athleteName: string | null } | null = null;
   try {
-    const user = await requireCapability("score.read");
+    const user = await requireReadForGuest("score.read");
     roster = await getRosterRows(user.memberships[0]?.teamId);
     const game = await prisma.trainingSession.findFirst({
       where: { sessionType: "GAME", athlete: { teamId: user.memberships[0]?.teamId } },

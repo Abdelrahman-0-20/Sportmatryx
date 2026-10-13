@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/ui/app-shell";
-import { Card, CardLabel, Sparkline } from "@/components/ui/primitives";
-import { requireCapability, errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
+import {Card,  CardLabel, Sparkline } from "@/components/ui/primitives";
+import {errorToResponse,  UnauthorizedError } from "@/lib/auth/rbac";
+import { requireReadForGuest } from "@/lib/offline";
 import { prisma } from "@/lib/prisma";
 import { daysAgoIso } from "@/lib/clock";
 
@@ -24,7 +25,7 @@ export default async function EnvironmentTravelPage() {
   let rows: Row[] = [];
   let envSummary: { heatDays: number; highAqiDays: number; travelEvents: number } | null = null;
   try {
-    const user = await requireCapability("score.read");
+    const user = await requireReadForGuest("score.read");
     const teamId = user.memberships[0]?.teamId;
     const athletes = await prisma.athlete.findMany({
       where: { isActive: true, ...(teamId ? { teamId } : {}) },

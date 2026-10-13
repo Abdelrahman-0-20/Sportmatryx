@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/ui/app-shell";
-import { Card, CardLabel } from "@/components/ui/primitives";
-import { Badge, statusVariant } from "@/components/ui/badge";
+import {Card,  CardLabel } from "@/components/ui/primitives";
+import {Badge,  statusVariant } from "@/components/ui/badge";
 import { InterventionActions } from "@/components/app/intervention-actions";
-import { requireCapability, can, errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
-import { listInterventions, getInterventionStats } from "@/lib/services/interventions";
+import {can,  errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
+import { requireReadForGuest } from "@/lib/offline";
+import {listInterventions,  getInterventionStats } from "@/lib/services/interventions";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function InterventionsPage({
 
   let rows, stats, teamId: string | undefined, canReview: boolean;
   try {
-    const user = await requireCapability("intervention.read");
+    const user = await requireReadForGuest("intervention.read");
     teamId = user.memberships[0]?.teamId;
     [rows, stats] = await Promise.all([
       listInterventions(teamId, tabStatuses(tab)?.length === 1 ? tabStatuses(tab)?.[0] : undefined),

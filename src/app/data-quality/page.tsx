@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/ui/app-shell";
-import { Card, CardLabel, Tag, WithheldStamp } from "@/components/ui/primitives";
+import {Card,  CardLabel, Tag, WithheldStamp } from "@/components/ui/primitives";
 import { ImportPanel } from "@/components/app/import-panel";
-import { requireCapability, errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
+import {errorToResponse,  UnauthorizedError } from "@/lib/auth/rbac";
+import { requireReadForGuest, isGuest } from "@/lib/offline";
+import { SAMPLE_ROSTER } from "@/lib/offline/sample-data";
 import { prisma } from "@/lib/prisma";
 import { nowMs, daysAgoIso } from "@/lib/clock";
 
@@ -16,33 +18,67 @@ export const dynamic = "force-dynamic";
 export default async function DataQualityPage() {
   let stats, invalidSamples, staleDevices, importJobs, withheld, staleObs;
   try {
-    await requireCapability("roster.read");
+    await requireReadForGuest("roster.read");
+    const guest = await isGuest();
     const since = new Date(daysAgoIso(14));
-    [invalidSamples, staleDevices, importJobs, withheld, staleObs] = await Promise.all([
-      prisma.observation.count({ where: { isValid: false, timestamp: { gte: since } } }),
-      prisma.device.findMany({
-        include: { calibrationRecords: { orderBy: { calibrationDate: "desc" }, take: 1 } },
-        take: 12,
-      }),
-      prisma.importJob.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
-      prisma.performanceScore.findMany({
-        where: { validityStatus: { in: ["WITHHELD", "RETEST", "INSUFFICIENT_BASELINE"] }, timestamp: { gte: new Date(daysAgoIso(7)) } },
-        orderBy: { timestamp: "desc" },
-        take: 12,
-        include: { athlete: { select: { id: true, firstName: true, lastName: true, externalId: true } } },
-      }),
-      prisma.$queryRaw<{ metric: string; stale_hours: number }[]>`
-        SELECT type AS metric, round(extract(epoch FROM (now() - max(timestamp))) / 3600)::int AS stale_hours
-        FROM observations
-        GROUP BY type
-        ORDER BY stale_hours DESC
-        LIMIT 8
-      `,
-    ]);
-    stats = {
-      invalidSamples,
-      totalObs: await prisma.observation.count(),
-    };
+    if (guest) {
+      // Offline/guest mode: render representative sample quality views without a DB.
+      invalidSamples = 34;
+      staleDevices = [
+        {
+          id: "dev-013", serialNumber: "DEV-013", model: "O2-MASK-V1",
+          calibrationRecords: [{ status: "Expired", calibrationDate: new Date(nowMs() - 72 * 3600000) }],
+        },
+        {
+          id: "dev-012", serialNumber: "DEV-012", model: "O2-MASK-V1",
+          calibrationRecords: [{ status: "OK", calibrationDate: new Date(nowMs() - 60 * 3600000) }],
+        },
+        {
+          id: "dev-010", serialNumber: "DEV-010", model: "O2-MASK-V1",
+          calibrationRecords: [{ status: "OK", calibrationDate: new Date(nowMs() - 2 * 3600000) }],
+        },
+      ];
+      importJobs = [
+        { id: "ij-1", fileName: "demo_observations_week3.csv", status: "COMPLETED", processedRows: 480, totalRows: 480, errorRows: 0 },
+        { id: "ij-2", fileName: "demo_bad_units.csv", status: "PARTIAL_SUCCESS", processedRows: 96, totalRows: 120, errorRows: 24 },
+      ] as never;
+      withheld = SAMPLE_ROSTER.filter((r) => r.band === "WITHHELD").map((r) => ({
+        id: r.athleteId, validityStatus: r.validity, validityReason: r.withheldCode,
+        timestamp: new Date(r.timestamp as string),
+        athlete: { id: r.athleteId, firstName: r.displayName.split(",")[0] ?? "S", lastName: r.displayName.split(",")[0] ?? "Sample", externalId: r.externalId },
+      })) as never;
+      staleObs = [
+        { metric: "HEAT_C", stale_hours: 26 }, { metric: "SLEEP_H", stale_hours: 18 },
+        { metric: "HRV_MS", stale_hours: 6 }, { metric: "RHR", stale_hours: 6 },
+      ] as never;
+      stats = { invalidSamples: 34, totalObs: 19732 };
+    } else {
+      [invalidSamples, staleDevices, importJobs, withheld, staleObs] = await Promise.all([
+        prisma.observation.count({ where: { isValid: false, timestamp: { gte: since } } }),
+        prisma.device.findMany({
+          include: { calibrationRecords: { orderBy: { calibrationDate: "desc" }, take: 1 } },
+          take: 12,
+        }),
+        prisma.importJob.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
+        prisma.performanceScore.findMany({
+          where: { validityStatus: { in: ["WITHHELD", "RETEST", "INSUFFICIENT_BASELINE"] }, timestamp: { gte: new Date(daysAgoIso(7)) } },
+          orderBy: { timestamp: "desc" },
+          take: 12,
+          include: { athlete: { select: { id: true, firstName: true, lastName: true, externalId: true } } },
+        }),
+        prisma.$queryRaw<{ metric: string; stale_hours: number }[]>`
+          SELECT type AS metric, round(extract(epoch FROM (now() - max(timestamp))) / 3600)::int AS stale_hours
+          FROM observations
+          GROUP BY type
+          ORDER BY stale_hours DESC
+          LIMIT 8
+        `,
+      ]);
+      stats = {
+        invalidSamples,
+        totalObs: await prisma.observation.count(),
+      };
+    }
   } catch (e) {
     if (e instanceof UnauthorizedError) redirect("/login");
     const mapped = errorToResponse(e);

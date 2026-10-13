@@ -5,6 +5,7 @@ import { Card, CardLabel, Tag, Sparkline, ConfidenceRing, WithheldStamp } from "
 import { AnimatedNumber } from "@/components/ui/animated";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { requireAthleteAccess, errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
+import { isGuest } from "@/lib/offline";
 import { getAthleteDetail } from "@/lib/services/athlete";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export default async function Player360Page({ params }: { params: Promise<{ id: 
   const { id } = await params;
   let detail;
   try {
-    await requireAthleteAccess(id);
+    if (!(await isGuest())) await requireAthleteAccess(id);
     detail = await getAthleteDetail(id);
   } catch (e) {
     if (e instanceof UnauthorizedError) redirect("/login");

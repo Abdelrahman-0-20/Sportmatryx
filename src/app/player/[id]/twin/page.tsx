@@ -4,6 +4,7 @@ import { AppShell } from "@/components/ui/app-shell";
 import { Card, CardLabel, Tag, Sparkline } from "@/components/ui/primitives";
 import { ScenarioCompare } from "@/components/app/scenario-compare";
 import { requireAthleteAccess, errorToResponse, UnauthorizedError } from "@/lib/auth/rbac";
+import { isGuest } from "@/lib/offline";
 import { getAthleteDetail } from "@/lib/services/athlete";
 import { weightsForPosition, COMPONENT_LABELS } from "@/lib/scoring/config";
 
@@ -17,7 +18,7 @@ export default async function TwinPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   let detail;
   try {
-    await requireAthleteAccess(id);
+    if (!(await isGuest())) await requireAthleteAccess(id);
     detail = await getAthleteDetail(id);
   } catch (e) {
     if (e instanceof UnauthorizedError) redirect("/login");
