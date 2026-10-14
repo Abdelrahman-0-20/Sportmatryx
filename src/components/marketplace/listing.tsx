@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MarketplaceCart } from "@/components/marketplace/cart";
 import { ProductCard } from "@/components/marketplace/product-card";
 import { FeaturedSpotlight } from "@/components/marketplace/featured-spotlight";
@@ -47,6 +47,47 @@ function MarketplaceListInner({ products }: { products: MarketProduct[] }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [view, setView] = useState<"buy" | "sell">("buy");
   const featured = products.find((p) => p.featured) ?? null;
+  // Cart ↔ cookie sync: the full cart page (/marketplace/cart) and the header
+  // count read the smx_marketplace_cart cookie via /api/marketplace/cart-state.
+  // Hydrate the dialog from it on mount and persist every change back so
+  // "View full cart" shows the same items as this dialog.
+  const cartHydrated = useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/marketplace/cart-state")
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((body: { items?: CartItem[] }) => {
+        if (cancelled) return;
+        const loaded = Array.isArray(body.items) ? body.items : [];
+        setItems((prev) => {
+          if (prev.length === 0) return loaded;
+          // Local additions win; merge cookie items in by product id.
+          const merged = prev.map((p) => ({ ...p }));
+          for (const l of loaded) {
+            const idx = merged.findIndex((m) => m.productId === l.productId);
+            if (idx >= 0) merged[idx] = { ...merged[idx], quantity: merged[idx].quantity + l.quantity };
+            else merged.push({ ...l });
+          }
+          return merged;
+        });
+        cartHydrated.current = true;
+      })
+      .catch(() => {
+        cartHydrated.current = true;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cartHydrated.current) return;
+    fetch("/api/marketplace/cart-state", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    }).catch(() => {});
+  }, [items]);
   const filtered = filteredProducts(products, filters);
 
   function addToCart(product: MarketProduct) {
