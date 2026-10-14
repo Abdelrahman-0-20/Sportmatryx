@@ -55,6 +55,11 @@ export default async function MarketplaceProductPage({
                 <p className="text-xs text-muted">{product.sourceLabel} · {product.id}</p>
                 <h1 className="display-heading text-2xl">{product.name}</h1>
                 <Tag label={product.tag} className="mt-1" />
+                {product.featured ? (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-accent/50 bg-accent/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-accent">
+                    ★ Best in demo
+                  </div>
+                ) : null}
               </div>
               {product.priceCents === 0 ? (
                 <span className="text-sm font-semibold text-ready">Demo · $0.00</span>

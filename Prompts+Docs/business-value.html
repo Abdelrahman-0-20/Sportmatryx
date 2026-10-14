@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 2cm; }
+  body {
+    font-family: 'Georgia', serif;
+    color: #1e293b;
+    font-size: 11pt;
+    line-height: 1.55;
+    max-width: 17cm;
+    margin: 0 auto;
+  }
+  h1 {
+    font-family: 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 24pt;
+    color: #0b1529;
+    border-bottom: 3px solid #22d3ee;
+    padding-bottom: 8px;
+    margin: 0 0 18px 0;
+  }
+  h2 {
+    font-family: 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 16pt;
+    color: #0b1529;
+    margin: 22px 0 8px 0;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 3px;
+  }
+  h3 {
+    font-family: 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12.5pt;
+    color: #155e75;
+    margin: 16px 0 6px 0;
+  }
+  p { margin: 6px 0; }
+  ul { margin: 6px 0 10px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<h1>Sportmetryx Football &#8212; Business Value, Problem Solved, and Insights</h1>
+<h2>1. What problem this project solves</h2>
+<p>Performance staff in football typically work across disconnected surfaces:</p>
+<ul>
+<li>readiness and availability decisions live in spreadsheets or gut feel;</li>
+<li>workload, recovery, and environment signals are reviewed separately;</li>
+<li>exceptions surface late, after an athlete is already compromised;</li>
+<li>consent and governance are hard to demonstrate;</li>
+<li>data quality issues are discovered after they affect decisions.</li>
+</ul>
+<p>Sportmetryx Football puts those surfaces into one operational platform:</p>
+<ul>
+<li>an exception-first <strong>Team Command</strong> view that routes attention to the athletes who need it;</li>
+<li>a <strong>validity-gated performance index</strong> so a number is only shown when the underlying evidence supports it;</li>
+<li><strong>role-based access</strong> so staff see only what they are allowed to see;</li>
+<li><strong>consent and audit trails</strong> so governance is visible and defensible;</li>
+<li><strong>data-quality views</strong> so missing, invalid, or stale data is visible before it becomes a decision problem;</li>
+<li>a <strong>marketplace</strong> layer that turns existing datasets and import jobs into purchasable/browsable data products.</li>
+</ul>
+<h2>2. What the project is, honestly</h2>
+<p>This is a <strong>decision-support platform</strong>, not a medical device and not an automated selection tool. Scores are labeled by evidence quality:</p>
+<ul>
+<li><strong>READY / MONITOR / COMPROMISED / WITHHELD</strong> bands;</li>
+<li><strong>confidence</strong> as an evidence-quality indicator, not a probability;</li>
+<li>every number can be withheld by a validity gate with a reason code.</li>
+</ul>
+<p>The platform is a prototype/demo environment with synthetic sample data. It is designed to be demonstrable, auditable, and governance-aware &#8212; not to predict injury or make automated lineup decisions.</p>
+<h2>3. Business value</h2>
+<h3>3.1. Faster, more defensible operational decisions</h3>
+<p>Team Command gives staff a single exception-first surface:</p>
+<ul>
+<li>readiness distribution;</li>
+<li>critical/high exception counts;</li>
+<li>position-group summaries;</li>
+<li>recent sessions and baseline activity;</li>
+<li>links into roster, player 360, interventions, and exports.</li>
+</ul>
+<p>This reduces the time spent hunting across data sources and makes the "who needs review now?" question easier to answer.</p>
+<h3>3.2. Validity-gated scores reduce reckless use of numbers</h3>
+<p>A readiness number is only released when the engine's validity gates pass:</p>
+<ul>
+<li>consent state;</li>
+<li>device calibration freshness;</li>
+<li>sample integrity;</li>
+<li>baseline sufficiency;</li>
+<li>capture freshness.</li>
+</ul>
+<p>If a gate fails, the composite is withheld with a reason code. That protects the business from acting on weak evidence and makes the platform more trustworthy for staff review.</p>
+<h3>3.3. Explainability supports adoption</h3>
+<p>Each score includes:</p>
+<ul>
+<li>component breakdown;</li>
+<li>top positive/negative drivers;</li>
+<li>validity checks with status and reason.</li>
+</ul>
+<p>That makes the platform easier to explain to athletes, coaches, and medical staff &#8212; and easier to trust.</p>
+<h3>3.4. Role-based access and consent support governance</h3>
+<ul>
+<li>roles such as ADMIN, PERFORMANCE, MEDICAL, COACH, EXECUTIVE, ATHLETE;</li>
+<li>team-scoped access and IDOR protection for athlete records;</li>
+<li>consent state that can withhold scores and exclude data from research cohorts/exports.</li>
+</ul>
+<p>This helps the platform fit real organizational and compliance expectations around who can see what, and under which consent state.</p>
+<h3>3.5. Data quality as a first-class surface</h3>
+<p>Data Quality &amp; Validity shows:</p>
+<ul>
+<li>invalid samples;</li>
+<li>calibration issues;</li>
+<li>import job outcomes;</li>
+<li>signal staleness;</li>
+<li>withheld scores with reason codes.</li>
+</ul>
+<p>That turns hidden data problems into visible workflow items.</p>
+<h3>3.6. Marketplace creates a reusable data-product layer</h3>
+<p>The marketplace turns existing import jobs and demo datasets into browsable, shortlistable, purchasable data products:</p>
+<ul>
+<li>team roster packages;</li>
+<li>session/workload packages;</li>
+<li>recovery and environment packages;</li>
+<li>per-athlete packages;</li>
+<li>import-job-derived packages.</li>
+</ul>
+<p>That makes the platform useful as a <strong>data-products surface</strong>, not just a read-only dashboard.</p>
+<h2>4. Key insights the project demonstrates</h2>
+<h3>4.1. Baseline-first is different from population-first</h3>
+<p>The engine normalizes against each athlete's own baseline percentiles, not against a generic population. That makes comparisons individualized and easier to interpret for that athlete.</p>
+<h3>4.2. Validity should be explicit, not implicit</h3>
+<p>Instead of showing every number and hoping people read the footnotes, the platform withholds results when evidence is insufficient, and explains why. That is a more honest and more usable design for a demo/support tool.</p>
+<h3>4.3. Confidence is not probability</h3>
+<p>Confidence is presented as evidence quality, with a clear tooltip and color/text combination. That avoids the common mistake of treating a single "confidence" number as a likelihood of correctness.</p>
+<h3>4.4. Exceptions are the right organizing principle for operations</h3>
+<p>An exception-first team view is often more operationally useful than a flat roster sorted by score, because the highest-severity cases are the ones that actually need attention.</p>
+<h3>4.5. Governance and consent are part of the product, not an afterthought</h3>
+<p>Consent state affects scores, exports, and research cohorts. That makes governance visible rather than buried.</p>
+<h3>4.6. The marketplace reframes data as products</h3>
+<p>Datasets become shortlistable, comparable, previewable, and purchasable. That is a useful mental model for internal data portfolios.</p>
+<h2>5. What was built</h2>
+<h3>5.1. Platform surface</h3>
+<ul>
+<li>landing/marketing page;</li>
+<li>guest mode for demo access without login;</li>
+<li>authenticated app shell with sidebar, header, and role-aware navigation;</li>
+<li>Team Command, Roster, Position Room, Practice Command, Game Readiness, Recovery Command, Environment &amp; Travel, Data Quality, Research &amp; Exports, Administration &amp; Audit;</li>
+<li>Player 360, Digital Athlete Twin, and Governance &amp; Consent pages.</li>
+</ul>
+<h3>5.2. Scoring and validity</h3>
+<ul>
+<li>seven-component performance index with position-model variants;</li>
+<li>athlete-own-baseline normalization;</li>
+<li>validity gates with fail-closed behavior;</li>
+<li>bands, confidence, drivers, explanation, and withheld reason codes.</li>
+</ul>
+<h3>5.3. Auth, access, and governance</h3>
+<ul>
+<li>session-based authentication with signed cookies;</li>
+<li>server-enforced RBAC;</li>
+<li>athlete access control;</li>
+<li>consent records and audit logging;</li>
+<li>tamper-evident hash chain for audit entries.</li>
+</ul>
+<h3>5.4. Data ingestion and exports</h3>
+<ul>
+<li>validated CSV import;</li>
+<li>import job tracking and error reporting;</li>
+<li>CSV exports for roster and per-athlete data;</li>
+<li>de-identified export option.</li>
+</ul>
+<h3>5.5. Marketplace</h3>
+<ul>
+<li>browsable product catalog derived from import jobs and sample datasets;</li>
+<li>search, filters, sort, shortlist/favorites;</li>
+<li>product detail with source summary and sample preview download;</li>
+<li>demo cart and demo checkout;</li>
+<li>shortlist preview and comparison panels.</li>
+</ul>
+<h2>6. What was learned</h2>
+<h3>6.1. Honesty labels are not optional</h3>
+<p>If scores can be withheld, the UI must make that obvious and explain why. Hidden validity logic undermines trust.</p>
+<h3>6.2. One root cause of deployment failures is environment, not code</h3>
+<p>The app can work locally and still fail in deployment if the database environment, secrets, or serverless bundling are not configured correctly. That is a deployment/operations lesson more than a product lesson.</p>
+<h3>6.3. Exception-first surfaces are easier to act on</h3>
+<p>Operational tools are more useful when they route attention rather than just display data.</p>
+<h3>6.4. Governance becomes more credible when visible</h3>
+<p>Consent and audit visibility make the platform easier to defend in a review context.</p>
+<h3>6.5. Data products need metadata</h3>
+<p>For a marketplace to feel real, products need source, size, availability, tag, and what-include metadata &#8212; not just a name and a price.</p>
+<h2>7. Current limitations</h2>
+<ul>
+<li>prototype weights and thresholds;</li>
+<li>synthetic sample data for demo/guest modes;</li>
+<li>no live external data feeds;</li>
+<li>demo checkout only; no real payment processing;</li>
+<li>deployment depends on correct database and secret configuration on the host.</li>
+</ul>
+<h2>8. Recommended next steps for business value</h2>
+<ul>
+<li>move from prototype weights toward reviewed configuration;</li>
+<li>add more real import sources as available;</li>
+<li>strengthen export and de-identification workflows;</li>
+<li>expand marketplace product metadata and comparison features;</li>
+<li>keep validity-gated design and consent/audit visibility as core differentiators.</li>
+</ul>
+</body>
+</html>

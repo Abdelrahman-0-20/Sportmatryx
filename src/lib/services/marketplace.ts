@@ -24,6 +24,10 @@ export interface MarketProduct {
   includes: string[];
   tag: string; // PROTOTYPE / ESTABLISHED / SAMPLE
   available: boolean;
+  // Demo highlight flags (additive). `featured` marks the demo's flagship
+  // device package; claims are scoped to this demo only.
+  featured?: boolean;
+  featuredNote?: string;
 }
 
 export interface CartItem {
@@ -94,6 +98,26 @@ async function queryProducts(): Promise<MarketProduct[]> {
 
 export function sampleProducts(): MarketProduct[] {
   return [
+    {
+      id: "sample-facebit",
+      name: "FaceBit smart mask — respiratory & vitals package (demo)",
+      description: "The flagship device package in this demo. FaceBit is a small sensor that clips inside a face mask and captures respiratory rate, heart rate, mask fit and wear-time alongside workload context — the highest signal-density package shown here. Synthetic sample data — not real athlete data.",
+      sourceLabel: "Featured device",
+      sourceRef: "sample",
+      priceCents: 5900,
+      currency: "USD",
+      rowsEstimate: 400,
+      includes: [
+        "Respiratory rate & heart-rate streams (synthetic)",
+        "Mask fit / wear-time sessions (synthetic)",
+        "Workload context join (synthetic)",
+        "Device calibration snapshot (synthetic)",
+      ],
+      tag: "SAMPLE",
+      available: true,
+      featured: true,
+      featuredNote: "Best in demo — presented as the most effective device package in this demonstration only.",
+    },
     {
       id: "sample-roster",
       name: "Team roster summary package",

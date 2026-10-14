@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { MarketplaceCart } from "@/components/marketplace/cart";
 import { ProductCard } from "@/components/marketplace/product-card";
+import { FeaturedSpotlight } from "@/components/marketplace/featured-spotlight";
+import { SellListing } from "@/components/marketplace/sell-listing";
 import {
   MarketplaceProvider,
   useMarketplace,
@@ -43,6 +45,8 @@ function MarketplaceListInner({ products }: { products: MarketProduct[] }) {
   const { filters, setFilters } = useMarketplace();
   const [cartOpen, setCartOpen] = useState(false);
   const [items, setItems] = useState<CartItem[]>([]);
+  const [view, setView] = useState<"buy" | "sell">("buy");
+  const featured = products.find((p) => p.featured) ?? null;
   const filtered = filteredProducts(products, filters);
 
   function addToCart(product: MarketProduct) {
@@ -73,6 +77,33 @@ function MarketplaceListInner({ products }: { products: MarketProduct[] }) {
 
   return (
     <>
+      <div className="mb-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setView("buy")}
+          className={view === "buy"
+            ? "rounded-md border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent"
+            : "rounded-md border border-edge bg-panel-2 px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink"}
+          aria-pressed={view === "buy"}
+        >
+          Buy data
+        </button>
+        <button
+          type="button"
+          onClick={() => setView("sell")}
+          className={view === "sell"
+            ? "rounded-md border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent"
+            : "rounded-md border border-edge bg-panel-2 px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink"}
+          aria-pressed={view === "sell"}
+        >
+          Sell / list
+        </button>
+      </div>
+
+      {view === "sell" ? (
+        <SellListing />
+      ) : (
+        <>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <input
@@ -164,6 +195,10 @@ function MarketplaceListInner({ products }: { products: MarketProduct[] }) {
         </div>
       )}
 
+      {featured ? (
+        <FeaturedSpotlight product={featured} onAddToCart={addToCart} />
+      ) : null}
+
       {filtered.length === 0 ? (
         <div className="rounded-[10px] border border-edge bg-panel p-6 text-center">
           <p className="text-sm text-muted">No products match your filters.</p>
@@ -181,6 +216,9 @@ function MarketplaceListInner({ products }: { products: MarketProduct[] }) {
             <ProductCard key={p.id} product={p} onAddToCart={() => addToCart(p)} />
           ))}
         </div>
+      )}
+
+      </>
       )}
 
       <MarketplaceCart
