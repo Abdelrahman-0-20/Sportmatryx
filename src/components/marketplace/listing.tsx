@@ -225,15 +225,9 @@ function MarketplaceListInner({ products }: { products: MarketProduct[] }) {
         items={items}
         onUpdate={setItems}
         onOpenFullCart={() => setCartOpen(false)}
+        open={cartOpen}
+        onOpenChange={setCartOpen}
       />
-
-      {cartOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-canvas/70"
-          onClick={() => setCartOpen(false)}
-          aria-hidden="true"
-        />
-      )}
     </>
   );
 }

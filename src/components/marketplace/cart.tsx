@@ -17,12 +17,24 @@ export function MarketplaceCart({
   items,
   onUpdate,
   onOpenFullCart,
+  open: openProp,
+  onOpenChange,
 }: {
   items: CartItem[];
   onUpdate: (items: CartItem[]) => void;
   onOpenFullCart?: () => void;
+  // Optional controlled mode: the parent owns open/close so "Add to cart"
+  // can open this dialog directly. Falls back to internal state otherwise.
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
+  function setOpen(next: boolean) {
+    if (isControlled) onOpenChange?.(next);
+    else setInternalOpen(next);
+  }
 
   function setQuantity(productId: string, quantity: number) {
     const next = items.map((i) =>
@@ -66,8 +78,14 @@ export function MarketplaceCart({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 p-4 bg-canvas/70" role="dialog" aria-modal="true" aria-label="Cart">
-          <div className="w-full max-w-lg rounded-[10px] border border-edge bg-panel p-4 shadow-[var(--shadow-float)]">
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-10 p-4 bg-canvas/70"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Cart"
+          onClick={() => setOpen(false)}
+        >
+          <div className="w-full max-w-lg rounded-[10px] border border-edge bg-panel p-4 shadow-[var(--shadow-float)]" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-edge pb-3">
               <div className="flex items-center gap-2">
                 <h2 className="display-heading text-lg">Cart</h2>
