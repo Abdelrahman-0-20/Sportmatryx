@@ -5,28 +5,28 @@
  * Dark command-center UI per the visual references.
  */
 @theme {
-  --color-canvas: #0a1220;
-  --color-panel: #101b2e;
-  --color-panel-2: #0d1626;
-  --color-edge: #1e2d45;
-  --color-ink: #e6eef8;
-  --color-muted: #9fb4cf;
-  --color-accent: #22d3ee;
-  --color-accent-dim: #0e7490;
-  --color-ready: #22d3ee;
-  --color-monitor: #f5b83d;
-  --color-compromised: #f0616d;
-  --color-withheld: #a9bdd6;
-  --color-prototype: #8b5cf6;
-  --color-positive: #34d399;
-  --color-critical: #ef4444;
+  --color-canvas: #0b1529;
+  --color-panel: #13203a;
+  --color-panel-2: #0f1a30;
+  --color-edge: #253755;
+  --color-ink: #e8f0f9;
+  --color-muted: #a9bbd6;
+  --color-accent: #5fd0f0;
+  --color-accent-dim: #1a6f8f;
+  --color-ready: #5fd0f0;
+  --color-monitor: #f3c861;
+  --color-compromised: #f07a82;
+  --color-withheld: #b8ccdf;
+  --color-prototype: #9d78f5;
+  --color-positive: #4ddb9f;
+  --color-critical: #f05260;
 
   --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --font-body: "Barlow", system-ui, sans-serif;
 
-  /* Shared elevation (soft depth, kept subtle for the dark command-center). */
-  --shadow-card: 0 8px 24px -12px rgb(0 0 0 / 0.6);
-  --shadow-float: 0 20px 50px -20px rgb(0 0 0 / 0.65), 0 0 0 1px rgb(34 211 238 / 0.06);
+  /* Shared elevation — softer depth for easier reading. */
+  --shadow-card: 0 6px 18px -12px rgb(0 0 0 / 0.45);
+  --shadow-float: 0 16px 40px -18px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(34 211 238 / 0.05);
 
   --radius-card: 10px;
 }
@@ -129,13 +129,13 @@ body {
 .hero-in-2 { animation-delay: 0.12s; }
 .hero-in-3 { animation-delay: 0.24s; }
 
-/* Cyan glow for READY pills and hero accents. */
+/* Softer glow for READY pills and hero accents. */
 @keyframes smx-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.0); }
-  50% { box-shadow: 0 0 18px 2px rgba(34, 211, 238, 0.28); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(95, 208, 240, 0.0); }
+  50% { box-shadow: 0 0 12px 1px rgba(95, 208, 240, 0.18); }
 }
 .glow-ready {
-  animation: smx-glow 3.2s ease-in-out infinite;
+  animation: smx-glow 3.6s ease-in-out infinite;
 }
 
 /* Sparkline draw-in. */
@@ -156,14 +156,14 @@ body {
   animation: smx-ring 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Card hover lift. */
+/* Card hover lift — gentler. */
 .card-lift {
   transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s, box-shadow 0.25s;
 }
 .card-lift:hover {
-  transform: translateY(-3px);
-  border-color: rgba(34, 211, 238, 0.35);
-  box-shadow: 0 10px 30px -18px rgba(34, 211, 238, 0.35);
+  transform: translateY(-2px);
+  border-color: rgba(95, 208, 240, 0.35);
+  box-shadow: 0 8px 22px -16px rgba(95, 208, 240, 0.28);
 }
 
 /* Roster row hover slide. */
@@ -181,15 +181,15 @@ tbody.row-stagger tr:nth-child(4) { animation-delay: 0.11s; }
 tbody.row-stagger tr:nth-child(5) { animation-delay: 0.14s; }
 tbody.row-stagger tr:nth-child(n+6) { animation-delay: 0.17s; }
 
-/* Shimmer for loading/empty states. */
+/* Shimmer for loading/empty states — softer. */
 @keyframes smx-shimmer {
   from { background-position: -200% 0; }
   to { background-position: 200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, rgba(30,45,69,0.4) 25%, rgba(34,211,238,0.12) 50%, rgba(30,45,69,0.4) 75%);
+  background: linear-gradient(90deg, rgba(30,45,69,0.32) 25%, rgba(95,208,240,0.08) 50%, rgba(30,45,69,0.32) 75%);
   background-size: 200% 100%;
-  animation: smx-shimmer 2.2s linear infinite;
+  animation: smx-shimmer 2.4s linear infinite;
 }
 
 /* Slow ambient drift of the backdrop grid. */
@@ -198,7 +198,7 @@ tbody.row-stagger tr:nth-child(n+6) { animation-delay: 0.17s; }
   to { background-position: 0 0, 48px 48px, 48px 48px; }
 }
 .app-backdrop {
-  animation: smx-drift 24s linear infinite;
+  animation: smx-drift 40s linear infinite;
 }
 
 /* Button sheen on hover. */

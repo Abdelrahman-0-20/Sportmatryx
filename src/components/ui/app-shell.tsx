@@ -31,6 +31,12 @@ const NAV: { section: string; items: { href: string; label: string }[] }[] = [
       { href: "/admin", label: "Administration & Audit" },
     ],
   },
+  {
+    section: "Commerce",
+    items: [
+      { href: "/marketplace", label: "Marketplace" },
+    ],
+  },
 ];
 
 export async function AppShell({
@@ -43,11 +49,12 @@ export async function AppShell({
   title: string;
 }) {
   const guest = await isGuest();
+  const cartItems = await getCartState();
   return (
     <div className="flex min-h-dvh">
       <Sidebar guest={guest} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header crumb={crumb} guest={guest} />
+        <Header crumb={crumb} guest={guest} cartItems={cartItems} />
         {guest ? (
           <div className="border-b border-purple-500/30 bg-prototype/15 px-4 py-2 text-center text-xs font-semibold text-purple-300 md:px-8" role="note">
             Guest demo mode — showing SYNTHETIC SAMPLE data. No account or live database required.
@@ -118,7 +125,8 @@ async function Sidebar({ guest }: { guest?: boolean }) {
   );
 }
 
-function Header({ crumb, guest }: { crumb: string; guest?: boolean }) {
+function Header({ crumb, guest, cartItems }: { crumb: string; guest?: boolean; cartItems?: { productId: string; quantity: number }[] }) {
+  const totalItems = (cartItems ?? []).reduce((a, i) => a + i.quantity, 0);
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between border-b border-edge bg-panel/90 px-4 py-2 backdrop-blur md:px-8">
       <div className="flex items-center gap-3">
@@ -127,10 +135,40 @@ function Header({ crumb, guest }: { crumb: string; guest?: boolean }) {
         </Link>
         <span className="hidden font-mono text-xs text-muted md:block">{crumb}</span>
       </div>
-      <span className="inline-flex items-center rounded-full border border-prototype/40 bg-prototype/15 px-3 py-1 text-xs font-semibold text-purple-300">
-        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-purple-400" aria-hidden="true" />
-        {guest ? "Guest · synthetic sample" : "Synthetic demo · PROTOTYPE"}
-      </span>
+      <div className="flex items-center gap-3">
+        <span className="inline-flex items-center rounded-full border border-prototype/40 bg-prototype/15 px-3 py-1 text-xs font-semibold text-purple-300">
+          <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-purple-400" aria-hidden="true" />
+          {guest ? "Guest · synthetic sample" : "Synthetic demo · PROTOTYPE"}
+        </span>
+        <CartIcon totalItems={totalItems} />
+      </div>
     </header>
   );
+}
+
+function CartIcon({ totalItems }: { totalItems: number }) {
+  return (
+    <Link
+      href="/marketplace/cart"
+      className="inline-flex items-center gap-1.5 rounded-md border border-edge bg-panel-2 px-2 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-accent hover:text-accent"
+      aria-label={`Open cart, ${totalItems} item${totalItems === 1 ? "" : "s"}`}
+    >
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+        <path d="M2 12.5H11M5 12.5V8.5L6.5 6l2 2.5V12.5M10 12.5V6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="12.5" cy="2" r="1.3" fill="currentColor" />
+      </svg>
+      {totalItems > 0 ? <span className="tabular">{totalItems}</span> : null}
+    </Link>
+  );
+}
+
+async function getCartState(): Promise<{ productId: string; quantity: number }[]> {
+  try {
+    const res = await fetch("/api/marketplace/cart-state", { cache: "no-store" });
+    if (!res.ok) return [];
+    const body = (await res.json()) as { items?: { productId: string; quantity: number }[] };
+    return Array.isArray(body.items) ? body.items : [];
+  } catch {
+    return [];
+  }
 }

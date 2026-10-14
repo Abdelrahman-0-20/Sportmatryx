@@ -1,0 +1,130 @@
+{
+  "title": "Sportmetryx Football — Business Value & Insights",
+  "author": "Sportmetryx Football",
+  "slides": [
+    {
+      "title": "Sportmetryx Football",
+      "level": "title",
+      "body": "Human Performance Intelligence for Football — decision support, validity-gated, explainable, governance-aware."
+    },
+    {
+      "title": "The problem",
+      "level": "section",
+      "body": [
+        "Readiness, workload, recovery, and environment signals reviewed separately.",
+        "Exceptions surface late.",
+        "Data quality issues discovered after they affect decisions.",
+        "Consent and governance hard to demonstrate.",
+        "Spreadsheets and gut feel still drive many decisions."
+      ]
+    },
+    {
+      "title": "What Sportmetryx Football does",
+      "level": "section",
+      "body": [
+        "One operational platform for performance staff.",
+        "Exception-first Team Command view.",
+        "Validity-gated performance index — numbers only shown when evidence supports them.",
+        "Role-based access and team scoping.",
+        "Consent and audit visibility.",
+        "Data-quality surface.",
+        "Marketplace for data products."
+      ]
+    },
+    {
+      "title": "Scores are honest by design",
+      "level": "section",
+      "body": [
+        "Bands: READY / MONITOR / COMPROMISED / WITHHELD.",
+        "Confidence is evidence quality, not probability.",
+        "Withheld scores carry a reason code.",
+        "Validity gates: consent, calibration, sample integrity, baseline sufficiency, freshness."
+      ]
+    },
+    {
+      "title": "Business value — operations",
+      "level": "section",
+      "body": [
+        "Faster routing of attention to athletes who need review.",
+        "Single exception-first surface instead of hunting across sources.",
+        "Readiness distribution, critical/high exceptions, position summaries.",
+        "Easy links to roster, player 360, interventions, exports."
+      ]
+    },
+    {
+      "title": "Business value — trust and governance",
+      "level": "section",
+      "body": [
+        "Validity-gated scores reduce reckless use of weak evidence.",
+        "Explainability: components, drivers, checks, reasons.",
+        "Role-based access and consent state gate what people can see.",
+        "Audit trail is tamper-evident and visible.",
+        "Consent can withhold scores and exclude data from exports/cohorts."
+      ]
+    },
+    {
+      "title": "Business value — data quality and marketplace",
+      "level": "section",
+      "body": [
+        "Data quality shown as a first-class surface: invalid samples, calibration, import jobs, staleness, withheld scores.",
+        "Marketplace turns datasets and import jobs into data products.",
+        "Products are browsable, shortlistable, comparable, previewable.",
+        "Makes the platform a data-products surface, not just a dashboard."
+      ]
+    },
+    {
+      "title": "Key insights",
+      "level": "section",
+      "body": [
+        "Baseline-first is different from population-first.",
+        "Validity should be explicit, not implicit.",
+        "Confidence is not probability.",
+        "Exceptions are the right organizing principle for operations.",
+        "Governance and consent belong in the product, not as an afterthought.",
+        "Data products need metadata: source, size, availability, tag, what's included."
+      ]
+    },
+    {
+      "title": "What was built",
+      "level": "section",
+      "body": [
+        "Landing + guest mode + authenticated app shell.",
+        "Team Command, Roster, Position Room, Practice Command, Game Readiness, Recovery Command, Environment & Travel.",
+        "Data Quality, Research & Exports, Administration & Audit.",
+        "Player 360, Digital Athlete Twin, Governance & Consent.",
+        "Seven-component index, validity gates, confidence, drivers, withheld reason codes.",
+        "Session auth, server-enforced RBAC, athlete access control, consent + audit.",
+        "Validated CSV import, import jobs, CSV exports, de-identified export option.",
+        "Marketplace: catalog, search, filters, sort, shortlist, detail, sample preview, demo cart/checkout, shortlist preview + comparison."
+      ]
+    },
+    {
+      "title": "What was learned",
+      "level": "section",
+      "body": [
+        "Honesty labels are not optional — withheld results must be obvious and explained.",
+        "Deployment failures are often environment/secret/bundling issues, not product bugs.",
+        "Exception-first surfaces are easier to act on than flat lists.",
+        "Governance becomes more credible when visible, not buried.",
+        "Data products need strong metadata to feel real."
+      ]
+    },
+    {
+      "title": "Limitations and next steps",
+      "level": "section",
+      "body": [
+        "Prototype weights and thresholds.",
+        "Synthetic sample data for demo/guest modes.",
+        "No live external data feeds.",
+        "Demo checkout only — no real payment processing.",
+        "Deployment depends on correct database and secret configuration on the host.",
+        "Next steps: review configuration, add more import sources, strengthen exports, expand marketplace metadata and comparison."
+      ]
+    },
+    {
+      "title": "Summary",
+      "level": "closing",
+      "body": "Sportmetryx Football is a decision-support platform that makes performance intelligence operational, explainable, validity-gated, and governance-aware — with a marketplace layer that turns data into reusable products."
+    }
+  ]
+}
