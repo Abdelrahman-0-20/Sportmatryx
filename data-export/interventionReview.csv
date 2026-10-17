@@ -1,0 +1,5 @@
+id,interventionId,reviewerId,reviewDate,statusChangeTo,notes,followUpAction,createdAt,updatedAt
+cmv7g8zgt0abn9l4oulss7gjo,cmv7g8zgq0abl9l4oawdnxul0,cmv7g8xfv00019l4o0mk8jbph,2026-10-14T01:46:58.829Z,UNDER_REVIEW,Synthetic demo review.,Suggested recovery audit with performance staff.,2026-10-14T01:46:58.829Z,2026-10-14T01:46:58.829Z
+cmv7g8zgy0abr9l4o05p485nj,cmv7g8zgw0abp9l4o43g4yq84,cmv7g8xfv00019l4o0mk8jbph,2026-10-14T01:46:58.834Z,FOLLOW_UP_REQUIRED,Synthetic demo review.,Human review of recovery trend and sleep context.,2026-10-14T01:46:58.834Z,2026-10-14T01:46:58.834Z
+cmv7g8zh20abv9l4ob9egv651,cmv7g8zh00abt9l4oyl76fdio,cmv7g8xfv00019l4o0mk8jbph,2026-10-14T01:46:58.838Z,RESOLVED,Synthetic demo review.,Retest completed with fresh calibration.,2026-10-14T01:46:58.838Z,2026-10-14T01:46:58.838Z
+cmv7g8zh40abx9l4oby53qp73,cmv7g8zh00abt9l4oyl76fdio,cmv7g8xfw00029l4ods5vrbls,2026-10-14T01:46:58.840Z,RESOLVED,Retest valid; composite restored.,No further follow-up.,2026-10-14T01:46:58.840Z,2026-10-14T01:46:58.840Z

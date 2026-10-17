@@ -1,0 +1,7 @@
+Team,Athlete,Exception,Priority,Status,Window,Description,Recommendation
+Ironmark Stallions,Enzo Calloway,CALIBRATION_STALE,HIGH,OPEN,Next 48h,Device calibration older than 48h for QB capture.,Inspect respiratory device calibration before next capture.
+Ironmark Stallions,Emmett Colter,MULTI_FAIL,CRITICAL,OPEN,Next 24h,"Multiple failed validity checks: calibration expired, sample integrity low.",Request validation retest with recalibrated device.
+Ironmark Stallions,Elias Crane,CONSENT_RESTRICTED,HIGH,OPEN,Next 48h,Data access restricted by athlete; composite withheld.,Confirm consent state with governance before next session.
+Ironmark Stallions,Jordan Jennings,LOAD_SPIKE,MEDIUM,UNDER_REVIEW,Next 48h,Acute:chronic workload ratio above 1.5 threshold.,Suggested recovery audit with performance staff.
+Ironmark Stallions,Jordan Jennings,RECOVERY_REVIEW,MEDIUM,FOLLOW_UP_REQUIRED,Next 48h,Prolonged suppressed recovery metrics.,Human review of recovery trend and sleep context.
+Ironmark Stallions,Arthur Smith,RETEST_REQUESTED,MEDIUM,RESOLVED,Next 48h,Requested validation retest after stale capture.,Retest completed with fresh calibration.

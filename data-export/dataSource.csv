@@ -1,0 +1,6 @@
+id,name,type,description,createdAt,updatedAt
+cmv7g8xhm001c9l4o4eevnmid,Synthetic Generator,SYNTHETIC,Synthetic demo source.,2026-10-14T01:46:56.267Z,2026-10-14T01:46:56.267Z
+cmv7g8xho001d9l4o0yb6u74l,Manual Entry,MANUAL,Synthetic demo source.,2026-10-14T01:46:56.268Z,2026-10-14T01:46:56.268Z
+cmv7g8xhq001e9l4o6slkhfat,CSV Import,FILE_UPLOAD,Synthetic demo source.,2026-10-14T01:46:56.270Z,2026-10-14T01:46:56.270Z
+cmv7g8xht001f9l4oqzmvau7d,Device Stream,DEVICE_INTEGRATION,Synthetic demo source.,2026-10-14T01:46:56.273Z,2026-10-14T01:46:56.273Z
+cmv7g8xhu001g9l4o30r9tq7o,Environment Feed,SYNTHETIC,Synthetic demo source.,2026-10-14T01:46:56.275Z,2026-10-14T01:46:56.275Z

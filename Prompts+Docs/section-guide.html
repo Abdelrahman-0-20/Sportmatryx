@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sportmetryx Football — Section Guide</title>
+<style>
+  @page { size: A4; margin: 14mm 13mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #17253d; margin: 0; font-size: 9.5pt; line-height: 1.45; }
+  header { background: #0b1529; color: #e8f0f9; padding: 14mm 13mm 9mm; margin: -14mm -13mm 8mm; }
+  header h1 { margin: 0 0 2mm; font-size: 20pt; letter-spacing: 0.5px; }
+  header h1 span { color: #5fd0f0; }
+  header p { margin: 0; color: #a9bbd6; font-size: 9.5pt; max-width: 150mm; }
+  .meta { margin-top: 3mm; font-size: 8pt; color: #7e93b3; }
+  h2 { font-size: 12pt; color: #0b1529; border-bottom: 2px solid #5fd0f0; padding-bottom: 1.5mm; margin: 7mm 0 3mm; }
+  .grid { display: flex; flex-wrap: wrap; gap: 3mm; }
+  .card { width: 100%; border: 1px solid #d8e2ef; border-left: 3px solid #5fd0f0; border-radius: 3px; padding: 3mm 4mm; break-inside: avoid; }
+  .card h3 { margin: 0 0 1.5mm; font-size: 10pt; color: #0b1529; }
+  .card h3 .path { font-family: "Consolas", monospace; font-size: 8pt; color: #1a6f8f; font-weight: normal; }
+  .card .row { margin: 0.8mm 0; }
+  .card .row b { color: #1a6f8f; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.4px; }
+  .roles { font-size: 8pt; color: #5a6f8f; font-style: italic; margin-top: 1mm; }
+  footer { margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #d8e2ef; font-size: 8pt; color: #5a6f8f; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sportmetryx <span>Football</span> — Section Guide</h1>
+  <p>What every section of the platform does, the benefit it delivers, and how to use it in daily work.</p>
+  <div class="meta">Summary edition · Roles referenced: Admin · Executive · Performance · Medical · Coach · Athlete · Demo password: Demo-SMX-2024!</div>
+</header>
+
+<h2>1 · Access &amp; Accounts</h2>
+<div class="grid">
+  <div class="card"><h3>Landing Page <span class="path">/</span></h3>
+    <div class="row"><b>What it is</b> Public overview of the platform: the scoring model (READY / MONITOR / COMPROMISED), module map, and trust/audit principles.</div>
+    <div class="row"><b>Benefit</b> New users understand the product before signing in; stakeholders can share a single link for demonstrations.</div>
+    <div class="row"><b>How to use</b> Read the module cards, then use <b>Sign in</b> (existing account) or <b>Continue as guest</b> (read-only preview with synthetic data).</div>
+  </div>
+  <div class="card"><h3>Sign In <span class="path">/login</span></h3>
+    <div class="row"><b>What it is</b> Secure email + password login with role-based access control (RBAC). Sessions are cookie-based and server-verified.</div>
+    <div class="row"><b>Benefit</b> Each role sees only what it should: no cross-role data leakage, auditable access.</div>
+    <div class="row"><b>How to use</b> Enter any demo account (e.g. <b>coach@demo.sportmetryx.dev</b>) with password <b>Demo-SMX-2024!</b>. Guests can use the guest link without an account.</div>
+  </div>
+  <div class="card"><h3>Guest Mode <span class="path">/guest</span></h3>
+    <div class="row"><b>What it is</b> Read-only mode using synthetic sample data when you have no account (or the database is unreachable).</div>
+    <div class="row"><b>Benefit</b> Investors, parents, or new staff can explore the full UI with zero risk to real data.</div>
+    <div class="row"><b>How to use</b> Click <b>Continue as guest</b> on the landing page. All write actions (checkout, interventions) stay disabled and clearly labeled.</div>
+  </div>
+  <div class="card"><h3>Admin Console <span class="path">/admin</span></h3>
+    <div class="row"><b>What it is</b> Administrator workspace for users, sessions, and system integrity (audit chain verification).</div>
+    <div class="row"><b>Benefit</b> One place to provision accounts, audit activity, and confirm the tamper-evident audit log has no breaks.</div>
+    <div class="row"><b>How to use</b> Sign in as <b>admin@demo.sportmetryx.dev</b>, review the user table, and run the audit-chain check to verify record integrity.</div>
+  </div>
+</div>
+
+<h2>2 · Performance Core</h2>
+<div class="grid">
+  <div class="card"><h3>Roster <span class="path">/roster</span></h3>
+    <div class="row"><b>What it is</b> Searchable squad list with each athlete's current readiness band (READY ≥ 70, MONITOR 40–69, COMPROMISED &lt; 40, or WITHHELD).</div>
+    <div class="row"><b>Benefit</b> Coaches spot at-risk athletes in seconds instead of scanning spreadsheets.</div>
+    <div class="row"><b>How to use</b> Filter by band or name; click any athlete row to open their full profile. Sort by readiness to triage training groups.</div>
+  </div>
+  <div class="card"><h3>Athlete / Player Profile <span class="path">/player/[id]</span></h3>
+    <div class="row"><b>What it is</b> Deep individual view: score components, evidence quality (confidence), validity gates, history, and consent status.</div>
+    <div class="row"><b>Benefit</b> Explains <i>why</i> an athlete scores as they do — never a black-box number; builds trust in decisions.</div>
+    <div class="row"><b>How to use</b> From the roster, open a player. Review component breakdown, check any WITHHELD reason (e.g. missing consent, stale baseline), then act in Team Command.</div>
+  </div>
+  <div class="card"><h3>Team Command <span class="path">/team-command</span></h3>
+    <div class="row"><b>What it is</b> Squad-level command center: aggregated readiness, distribution across bands, and priority call-outs.</div>
+    <div class="row"><b>Benefit</b> Answers the daily question "who do I push, who do I protect?" in one screen.</div>
+    <div class="row"><b>How to use</b> Each morning, scan COMPROMISED/MONITOR lists, open flagged athletes, and plan the day's adjustments from there.</div>
+  </div>
+  <div class="card"><h3>Game Readiness <span class="path">/game-readiness</span></h3>
+    <div class="row"><b>What it is</b> Match-day readiness projection per athlete, combining recent load, recovery, and score trend.</div>
+    <div class="row"><b>Benefit</b> Objective input for selection meetings — pick the squad on evidence, not gut feel.</div>
+    <div class="row"><b>How to use</b> Before match day, review projected readiness per position; discuss borderline athletes with the performance staff.</div>
+  </div>
+  <div class="card"><h3>Position Room <span class="path">/position-room</span></h3>
+    <div class="row"><b>What it is</b> Readiness and scoring grouped by playing position (GK, DEF, MID, FWD).</div>
+    <div class="row"><b>Benefit</b> Unit coaches see their own group in context; positional load differences become visible.</div>
+    <div class="row"><b>How to use</b> Select a position tab to compare your unit; use it in unit-specific planning meetings.</div>
+  </div>
+  <div class="card"><h3>Practice Command <span class="path">/practice-command</span></h3>
+    <div class="row"><b>What it is</b> Training-session view: who is ready to train fully, who needs modification, today.</div>
+    <div class="row"><b>Benefit</b> Prevents overtraining — modifies sessions before injuries happen, not after.</div>
+    <div class="row"><b>How to use</b> Check before each session; athletes in MONITOR/COMPROMISED get modified loads per the recommendations shown.</div>
+  </div>
+  <div class="card"><h3>Recovery Command <span class="path">/recovery-command</span></h3>
+    <div class="row"><b>What it is</b> Recovery status overview: sleep, soreness, and recovery-trend signals feeding the score.</div>
+    <div class="row"><b>Benefit</b> Makes recovery a managed resource, equal to training load.</div>
+    <div class="row"><b>How to use</b> Review after heavy blocks; schedule extra recovery for athletes trending down across several days.</div>
+  </div>
+</div>
+
+<h2>3 · Care, Data Quality &amp; Context</h2>
+<div class="grid">
+  <div class="card"><h3>Interventions <span class="path">/interventions</span></h3>
+    <div class="row"><b>What it is</b> Create and track care actions (load reduction, medical referral, recovery protocol) linked to athlete scores.</div>
+    <div class="row"><b>Benefit</b> Closes the loop: a risk signal leads to a documented action with a follow-up — nothing falls through the cracks.</div>
+    <div class="row"><b>How to use</b> From a flagged athlete, open an intervention, choose the type and note, save; track its state until resolved. Every action is written to the audit log.</div>
+  </div>
+  <div class="card"><h3>Data Quality <span class="path">/data-quality</span></h3>
+    <div class="row"><b>What it is</b> Validity gates dashboard: calibration freshness, sample integrity, timestamp freshness, baseline sufficiency, consent state.</div>
+    <div class="row"><b>Benefit</b> Shows <i>which data can be trusted today</i> — scores fail closed when evidence is weak, so no decision rests on bad data.</div>
+    <div class="row"><b>How to use</b> Review weekly; re-run imports or recalibrate devices for any gate shown as failing.</div>
+  </div>
+  <div class="card"><h3>Environment &amp; Travel <span class="path">/environment-travel</span></h3>
+    <div class="row"><b>What it is</b> Context layer for heat, travel, and scheduling factors that affect performance outside of training itself.</div>
+    <div class="row"><b>Benefit</b> Separates "he is declining" from "he played in 35°C heat" — fairer evaluations, better trip planning.</div>
+    <div class="row"><b>How to use</b> Around travel weeks, check environmental load alongside readiness to adjust expectations and plans.</div>
+  </div>
+  <div class="card"><h3>Research <span class="path">/research</span></h3>
+    <div class="row"><b>What it is</b> Aggregate, anonymized analytics for sports-science staff: cohort trends and model calibration checks.</div>
+    <div class="row"><b>Benefit</b> Turns months of session data into insight — validate the scoring model and find cohort patterns.</div>
+    <div class="row"><b>How to use</b> Select a cohort and time range; export results for reports. Individual identities are never exposed here.</div>
+  </div>
+  <div class="card"><h3>Digital Twin Simulation <span class="path">/player/[id]/twin</span></h3>
+    <div class="row"><b>What it is</b> "What-if" simulator: replay a training block with modified load and see the projected score outcome.</div>
+    <div class="row"><b>Benefit</b> Test decisions safely — try a lighter week before committing to it in real life.</div>
+    <div class="row"><b>How to use</b> From a player profile, open the twin, adjust the load parameter, run the simulation, and compare projected bands.</div>
+  </div>
+</div>
+
+<h2>4 · Marketplace (Demo Commerce)</h2>
+<div class="grid">
+  <div class="card"><h3>Marketplace Listing <span class="path">/marketplace</span></h3>
+    <div class="row"><b>What it is</b> Catalog of data products: team data exports (derived from real import jobs) and synthetic sample datasets. Sellers can create listings with multiple product photos.</div>
+    <div class="row"><b>Benefit</b> Shows the commercial layer of the platform — how data could be packaged and sold — with full honesty labels (every item is marked DEMO / synthetic).</div>
+    <div class="row"><b>How to use</b> Browse or filter by tag, data type, and availability; search by name; open a product card for details and source summary; download a labeled sample CSV before "buying".</div>
+  </div>
+  <div class="card"><h3>Sell a Product <span class="path">/marketplace/sell</span></h3>
+    <div class="row"><b>What it is</b> Listing creation form: name, description, price, and multiple image uploads with previews and re-ordering.</div>
+    <div class="row"><b>Benefit</b> Team staff can package their own data products for sale — the marketplace becomes a two-sided store.</div>
+    <div class="row"><b>How to use</b> From the marketplace, open <b>Sell</b>; fill the form, drag/select several photos (first image becomes the cover), and publish. Images are stored on the server; uploads are validated by type and size.</div>
+  </div>
+  <div class="card"><h3>Cart &amp; Checkout <span class="path">/marketplace/cart</span></h3>
+    <div class="row"><b>What it is</b> Shopping cart with automatic calculation (price × quantity per line, grand total) and a demo checkout flow.</div>
+    <div class="row"><b>Benefit</b> Complete commerce UX without touching real money — ideal for demos and stakeholder reviews.</div>
+    <div class="row"><b>How to use</b> Add products with <b>Add to cart</b> (the floating cart dialog shows live totals); open the full cart page, adjust quantities, then <b>Check out</b>. The checkout re-prices every item server-side and records a <b>MARKETPLACE_DEMO_PURCHASE</b> entry in the tamper-evident audit log. No payment processing, no money moved — always labeled demo.</div>
+  </div>
+</div>
+
+<h2>5 · The Scoring Model (Behind Every Screen)</h2>
+<div class="grid">
+  <div class="card"><h3>How scores are built</h3>
+    <div class="row"><b>Method</b> Seven weighted components (fitness, load, recovery, sleep, soreness, readiness signals, context) normalized against each athlete's <i>own</i> baseline percentiles (p10 / p50 / p90).</div>
+    <div class="row"><b>Benefit</b> Every athlete is measured against themselves, not the squad average — a 65 for a returning-injury player means something different than for a starter.</div>
+    <div class="row"><b>Bands</b> READY ≥ 70 · MONITOR 40–69.9 · COMPROMISED &lt; 40 · WITHHELD when evidence is insufficient.</div>
+  </div>
+  <div class="card"><h3>Validity gates &amp; audit trail</h3>
+    <div class="row"><b>Method</b> Scores fail closed: if calibration is stale, consent is missing, samples are incomplete, or timestamps are old, the score is WITHHELD with an explicit reason.</div>
+    <div class="row"><b>Benefit</b> The platform never presents a confident number built on weak evidence — this is the core trust guarantee.</div>
+    <div class="row"><b>Transparency</b> Every sensitive action (purchases, interventions, consent changes) is written to a SHA-256 hash-chained audit log that anyone can verify for tampering.</div>
+  </div>
+</div>
+
+<footer>
+  Sportmetryx Football · Section Guide (summary edition) · Generated from the live application routes · All data shown in demos is synthetic and labeled; marketplace checkout is a demo with no real payments.
+</footer>
+</body>
+</html>

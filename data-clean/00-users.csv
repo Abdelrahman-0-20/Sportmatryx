@@ -1,0 +1,7 @@
+Email,Name,Role
+admin@demo.sportmetryx.dev,Demo Administrator (DEV ONLY),ADMIN
+athlete@demo.sportmetryx.dev,Demo Athlete (DEV ONLY),ATHLETE
+coach@demo.sportmetryx.dev,Demo Coach / Football Ops (DEV ONLY),COACH
+executive@demo.sportmetryx.dev,Demo Executive (DEV ONLY),EXECUTIVE
+medical@demo.sportmetryx.dev,Demo Medical Staff (DEV ONLY),MEDICAL
+performance@demo.sportmetryx.dev,Demo Performance Staff (DEV ONLY),PERFORMANCE

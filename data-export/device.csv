@@ -1,0 +1,7 @@
+id,serialNumber,model,manufacturer,type,description,isActive,createdAt,updatedAt
+cmv7g8xh0000u9l4o2scx2q1c,DEV-010,O2-MASK-V1,RespiroCorp,Respiratory Mask,Synthetic demo respiratory mask (DEV-010).,true,2026-10-14T01:46:56.245Z,2026-10-14T01:46:56.245Z
+cmv7g8xh5000x9l4oc8kgzu90,DEV-011,CHEST-STRAP-X,BioFit,Chest Strap,Synthetic demo chest strap (DEV-011).,true,2026-10-14T01:46:56.250Z,2026-10-14T01:46:56.250Z
+cmv7g8xh800109l4o4g30o0yg,DEV-012,O2-MASK-V1,RespiroCorp,Respiratory Mask,Synthetic demo respiratory mask (DEV-012).,true,2026-10-14T01:46:56.253Z,2026-10-14T01:46:56.253Z
+cmv7g8xhc00139l4olzkdby9h,DEV-013,O2-MASK-V1,RespiroCorp,Respiratory Mask,Synthetic demo respiratory mask (DEV-013).,true,2026-10-14T01:46:56.257Z,2026-10-14T01:46:56.257Z
+cmv7g8xhg00169l4o44x84e0b,DEV-014,GPS-POD-G3,FieldSense,GPS Unit,Synthetic demo gps unit (DEV-014).,true,2026-10-14T01:46:56.260Z,2026-10-14T01:46:56.260Z
+cmv7g8xhj00199l4os5d9x4il,DEV-015,ENV-STATION-1,Aeris Labs,Environment Station,Synthetic demo environment station (DEV-015).,true,2026-10-14T01:46:56.263Z,2026-10-14T01:46:56.263Z

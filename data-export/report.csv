@@ -1,0 +1,3 @@
+id,name,reportType,parameters,generatedBy,generatedAt,filePath,status,createdAt,updatedAt
+cmv7g8zhb0ac29l4oy2ih7fbz,Team Readiness Summary — Week 3,TEAM_SUMMARY,{"teamId":"cmv7g8xg300069l4ohpck331y","periodDays":7},cmv7g8xfv00019l4o0mk8jbph,2026-10-14T01:46:58.847Z,,COMPLETED,2026-10-14T01:46:58.847Z,2026-10-14T01:46:58.847Z
+cmv7g8zhd0ac39l4ot9v2ztdk,Data Quality Review — Import Failures,DATA_QUALITY,{"windowDays":14},cmv7g8xfr00009l4onk8k7as5,2026-10-14T01:46:58.849Z,,COMPLETED,2026-10-14T01:46:58.849Z,2026-10-14T01:46:58.849Z

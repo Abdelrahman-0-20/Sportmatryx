@@ -1,0 +1,2 @@
+id,userId,action,entityType,entityId,oldValue,newValue,ipAddress,timestamp,prevHash,hash,seq
+cmv7g8ziu0ac59l4ouj3p376o,cmv7g8xfr00009l4onk8k7as5,SEED_CREATE,System,,,{"note":"Deterministic synthetic seed applied, phase 2 (demo environment)."},127.0.0.1,2026-10-14T01:46:58.901Z,0000000000000000000000000000000000000000000000000000000000000000,53bcb20d0ab6a98d8beebe56b0fd6ea378dfe0c5093504986d1e71dd63afa8ef,311

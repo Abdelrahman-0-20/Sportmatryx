@@ -1,0 +1,7 @@
+id,deviceId,calibrationDate,nextCalibrationDate,status,performedBy,notes,createdAt,updatedAt
+cmv7g8xh3000w9l4oenuvu3j7,cmv7g8xh0000u9l4o2scx2q1c,2026-10-13T23:46:55.247Z,2026-10-28T01:46:55.247Z,OK,cmv7g8xfv00019l4o0mk8jbph,Routine calibration (synthetic).,2026-10-14T01:46:56.248Z,2026-10-14T01:46:56.248Z
+cmv7g8xh7000z9l4ow0clr6kc,cmv7g8xh5000x9l4oc8kgzu90,2026-10-12T19:46:55.247Z,2026-10-28T01:46:55.247Z,OK,cmv7g8xfv00019l4o0mk8jbph,Routine calibration (synthetic).,2026-10-14T01:46:56.251Z,2026-10-14T01:46:56.251Z
+cmv7g8xha00129l4osz2afhpn,cmv7g8xh800109l4o4g30o0yg,2026-10-11T13:46:55.247Z,2026-10-28T01:46:55.247Z,OK,cmv7g8xfv00019l4o0mk8jbph,Routine calibration (synthetic).,2026-10-14T01:46:56.255Z,2026-10-14T01:46:56.255Z
+cmv7g8xhe00159l4owi6tcyhl,cmv7g8xhc00139l4olzkdby9h,2026-10-11T01:46:55.247Z,2026-10-28T01:46:55.247Z,Expired,cmv7g8xfv00019l4o0mk8jbph,Synthetic demo device with overdue calibration.,2026-10-14T01:46:56.259Z,2026-10-14T01:46:56.259Z
+cmv7g8xhh00189l4od6q3llfs,cmv7g8xhg00169l4o44x84e0b,2026-10-13T21:46:55.247Z,2026-10-28T01:46:55.247Z,OK,cmv7g8xfv00019l4o0mk8jbph,Routine calibration (synthetic).,2026-10-14T01:46:56.262Z,2026-10-14T01:46:56.262Z
+cmv7g8xhl001b9l4os0x1n03s,cmv7g8xhj00199l4os5d9x4il,2026-10-13T17:46:55.247Z,2026-10-28T01:46:55.247Z,OK,cmv7g8xfv00019l4o0mk8jbph,Routine calibration (synthetic).,2026-10-14T01:46:56.265Z,2026-10-14T01:46:56.265Z

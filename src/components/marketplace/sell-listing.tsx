@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardLabel, Tag, Button } from "@/components/ui/primitives";
+import { ListingImages } from "./listing-images";
 
 /**
  * "Sell / list" tab — create locally-stored, synthetic-only listing cards.
@@ -23,6 +24,7 @@ export interface LocalListing {
   source: string;
   priceUsd: number;
   terms: string;
+  images?: string[];
   createdAt: string;
 }
 
@@ -51,6 +53,7 @@ export function SellListing() {
   const [category, setCategory] = useState(CATEGORY_OPTIONS[0]);
   const [description, setDescription] = useState("");
   const [source, setSource] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [priceUsd, setPriceUsd] = useState(25);
   const [terms, setTerms] = useState("Research only · cohort-level use");
   const [syntheticOnly, setSyntheticOnly] = useState(false);
@@ -74,6 +77,7 @@ export function SellListing() {
       source: source.trim() || "Unspecified provenance",
       priceUsd: Number.isFinite(priceUsd) && priceUsd >= 0 ? priceUsd : 0,
       terms: terms.trim() || "No terms stated",
+      images: images.slice(0, 6),
       createdAt: new Date().toISOString(),
     };
     const next = [listing, ...readListings()];
@@ -82,6 +86,7 @@ export function SellListing() {
     setTitle("");
     setDescription("");
     setSource("");
+    setImages([]);
     setSyntheticOnly(false);
     setCreated(listing.id);
   }
@@ -153,6 +158,8 @@ export function SellListing() {
                 className="rounded-md border border-edge bg-panel-2 px-3 py-2 text-sm placeholder:text-muted focus:border-accent"
               />
             </label>
+
+            <ListingImages value={images} onChange={setImages} />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1">
@@ -266,6 +273,24 @@ export function SellListing() {
                     <h3 className="mt-1 truncate text-sm font-semibold text-ink">{l.title}</h3>
                     {l.description ? (
                       <p className="mt-0.5 truncate text-xs text-muted">{l.description}</p>
+                    ) : null}
+                    {l.images && l.images.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {l.images.slice(0, 4).map((src, i) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={`${l.id}-thumb-${i}`}
+                            src={src}
+                            alt={`${l.title} image ${i + 1}`}
+                            className="h-12 w-16 rounded border border-edge object-cover"
+                          />
+                        ))}
+                        {l.images.length > 4 ? (
+                          <span className="flex h-12 w-16 items-center justify-center rounded border border-edge bg-panel text-xs text-muted">
+                            +{l.images.length - 4}
+                          </span>
+                        ) : null}
+                      </div>
                     ) : null}
                     <p className="mt-1 text-xs text-muted">
                       Provenance: {l.source} · Terms: {l.terms}

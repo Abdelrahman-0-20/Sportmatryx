@@ -25,6 +25,7 @@ model User {
   sessions      Session[]
   memberships   TeamMembership[]
   auditLogs     AuditLog[]
+  uploadedImages MarketProductImage[]
   interventionReviews InterventionReview[]
 
   @@map("users")
@@ -601,4 +602,22 @@ model AuditLog {
   @@index([timestamp])
   @@index([seq])
   @@map("audit_logs")
+}
+
+// Marketplace product images, uploaded by sellers. Keyed by the marketplace
+// product key (e.g. "job-<importJobId>" or "sample-roster") rather than a FK,
+// so catalog products derived from ImportJobs can carry photos too.
+model MarketProductImage {
+  id         String   @id @default(cuid())
+  productKey String // marketplace product id the image belongs to
+  mimeType   String // e.g. "image/jpeg", "image/png", "image/webp"
+  data       Bytes // raw image bytes stored in DB so uploads work on serverless hosting
+  sortOrder  Int      @default(0) // 0 = cover image
+  uploadedBy String? // User id of uploader
+  createdAt  DateTime @default(now())
+
+  uploader User? @relation(fields: [uploadedBy], references: [id])
+
+  @@index([productKey, sortOrder])
+  @@map("market_product_images")
 }
