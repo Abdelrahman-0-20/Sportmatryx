@@ -10,7 +10,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Tag } from "@/components/ui/primitives";
-import type { CartItem } from "@/lib/services/marketplace";
+// The cookie cart stores items written by the client dialog, which may carry
+// tag/sourceLabel; those live on the client CartItem type, not the server one.
+import type { CartItem } from "@/components/marketplace/cart";
 
 export function CartLines({ items }: { items: CartItem[] }) {
   const router = useRouter();
