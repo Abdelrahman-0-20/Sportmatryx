@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/ui/app-shell";
-import { Card, CardLabel, Tag, LinkButton } from "@/components/ui/primitives";
+import { Card, CardLabel, LinkButton } from "@/components/ui/primitives";
 import { CheckoutIsland } from "@/components/marketplace/checkout-island";
+import { CartLines } from "@/components/marketplace/cart-lines";
 import { requireCapability } from "@/lib/auth/rbac";
 import { listProducts, finalizeCart, type CartItem, type MarketProduct } from "@/lib/services/marketplace";
 
@@ -98,31 +99,7 @@ export default async function CartPage({
           ) : (
             <Card ariaLabel="Cart items">
               <CardLabel>Cart</CardLabel>
-              <ul className="flex flex-col gap-2">
-                {valid.map((i) => {
-                  const product = catalog.find((p) => p.id === i.productId);
-                  return (
-                    <li
-                      key={i.productId}
-                      className="flex items-start justify-between gap-3 border border-edge/60 rounded-md bg-panel-2 p-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          {product?.tag ? <Tag label={product.tag} /> : null}
-                          <span className="truncate text-sm font-semibold">{i.name}</span>
-                        </div>
-                        <p className="mt-1 text-xs text-muted truncate">
-                          {product?.sourceLabel ? `${product.sourceLabel} · ` : ""}
-                          {i.priceCents === 0 ? "Demo — no charge" : `$${(i.priceCents / 100).toFixed(2)} each`}
-                        </p>
-                      </div>
-                      <div className="text-right tabular text-sm font-semibold">
-                        {i.priceCents === 0 ? "$0.00" : `$${((i.priceCents * i.quantity) / 100).toFixed(2)}`}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <CartLines items={valid} />
               <div className="mt-3 border-t border-edge pt-3 flex items-center justify-between">
                 <span className="text-sm text-muted">{valid.length} item{valid.length === 1 ? "" : "s"}</span>
                 <span className="tabular font-semibold">
