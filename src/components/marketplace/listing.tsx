@@ -18,6 +18,7 @@ const TAG_OPTIONS = [
   { value: "SAMPLE", label: "SAMPLE" },
   { value: "ESTABLISHED", label: "ESTABLISHED" },
   { value: "PROTOTYPE", label: "PROTOTYPE" },
+  { value: "COMMUNITY", label: "COMMUNITY" },
 ];
 
 const AVAILABLE_OPTIONS = [
@@ -258,6 +259,9 @@ function MarketplaceListInner({ products }: { products: MarketProduct[] }) {
           ))}
         </div>
       )}
+
+      {/* Community listings are served through listProducts() and appear in the
+          main grid above as regular products with Add-to-cart. */}
 
       </>
       )}

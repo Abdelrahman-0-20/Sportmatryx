@@ -4,8 +4,11 @@ import { requireReadForGuest } from "@/lib/offline";
 import {
   listProducts,
   productSourceSummary,
+  productImages,
   type MarketProduct,
+  type MarketProductImage,
 } from "@/lib/services/marketplace";
+import { AddToCartButton } from "@/components/marketplace/add-to-cart-button";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +47,12 @@ export default async function MarketplaceProductPage({
   }
 
   const source = await productSourceSummary(product);
+  let images: MarketProductImage[] = [];
+  try {
+    images = await productImages(product.id);
+  } catch {
+    // Photo gallery is additive — catalog details still render without it.
+  }
 
   return (
     <AppShell crumb={`/marketplace/${product.id}`} title={product.name}>
@@ -71,6 +80,21 @@ export default async function MarketplaceProductPage({
             </div>
 
             <p className="mt-3 text-sm text-muted">{product.description}</p>
+
+            {images.length > 0 ? (
+              <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                {images.map((img) => (
+                  // eslint-disable-next-line @next/next/no-img-element -- database-served image, not a remote file
+                  <img
+                    key={img.id}
+                    src={`/api/marketplace/images/${img.id}`}
+                    alt={img.alt ?? `${product.name} photo`}
+                    className="h-24 w-full rounded-md border border-edge object-cover"
+                    loading="lazy"
+                  />
+                ))}
+              </div>
+            ) : null}
 
             <ul className="mt-3 flex flex-wrap gap-1.5 text-xs text-muted">
               {product.includes.map((i) => (
@@ -119,7 +143,13 @@ export default async function MarketplaceProductPage({
                 : `Demo price: ${(product.priceCents / 100).toFixed(2)} ${product.currency}.`}
             </p>
             <div className="mt-3 flex flex-col gap-2">
-              <LinkButton href="/marketplace/cart" variant="primary" className="w-full">
+              <AddToCartButton
+                productId={product.id}
+                name={product.name}
+                priceCents={product.priceCents}
+                tag={product.tag}
+              />
+              <LinkButton href="/marketplace/cart" variant="ghost" className="w-full">
                 Open cart
               </LinkButton>
               <LinkButton href="/marketplace" variant="ghost" className="w-full">

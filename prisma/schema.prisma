@@ -27,6 +27,7 @@ model User {
   auditLogs     AuditLog[]
   uploadedImages MarketProductImage[]
   interventionReviews InterventionReview[]
+  marketListings MarketListing[]
 
   @@map("users")
 }
@@ -71,6 +72,27 @@ enum Role {
 }
 
 // Teams and Athletes
+// Community listings: sellers publish data products/services for the marketplace.
+// Photos are stored through the existing MarketProductImage table with productKey = listing id.
+model MarketListing {
+  id          String   @id @default(cuid())
+  sellerId    String?
+  seller      User?    @relation(fields: [sellerId], references: [id])
+  title       String
+  sport       String
+  category    String
+  description String
+  source      String
+  priceUsd    Float    @default(0)
+  terms       String
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([sellerId])
+  @@map("market_listings")
+}
+
 model Team {
   id           String         @id @default(cuid())
   name         String         @unique

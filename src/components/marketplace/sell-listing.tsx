@@ -3,99 +3,100 @@
 import { useEffect, useState } from "react";
 import { Card, CardLabel, Tag, Button } from "@/components/ui/primitives";
 import { ListingImages } from "./listing-images";
+import { MAX_LISTING_FILES, ListingFiles, type ListingFile } from "./listing-files";
 
 /**
- * "Sell / list" tab — create locally-stored, synthetic-only listing cards.
+ * "Sell / list" tab — publish a listing to the app database.
  *
- * HONESTY RULE (matches the reference demo): no listing is transmitted to the
- * server. Browser localStorage holds only the listing metadata typed here.
- * Local listings are visible only in this browser and are NOT checkout
- * eligible (demo checkout re-prices from the server catalog only).
+ * HONESTY RULE: this is still a DEMO marketplace. Listings are stored in the
+ * database and visible to everyone (CommunityListings section), but checkout
+ * remains a demo flow with no real payment and no money moved. Guests can
+ * browse but only signed-in users can publish.
  */
-
-const LISTINGS_KEY = "smx_marketplace_listings";
-
-export interface LocalListing {
-  id: string;
-  title: string;
-  sport: string;
-  category: string;
-  description: string;
-  source: string;
-  priceUsd: number;
-  terms: string;
-  images?: string[];
-  createdAt: string;
-}
 
 const SPORT_OPTIONS = ["Football", "Basketball", "Cycling", "Running", "Other"];
 const CATEGORY_OPTIONS = ["Performance", "Recovery", "Environment", "Workload", "Other"];
 
-function readListings(): LocalListing[] {
-  try {
-    const raw = window.localStorage.getItem(LISTINGS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as LocalListing[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeListings(listings: LocalListing[]) {
-  window.localStorage.setItem(LISTINGS_KEY, JSON.stringify(listings));
-}
-
 export function SellListing() {
-  const [listings, setListings] = useState<LocalListing[]>([]);
   const [title, setTitle] = useState("");
   const [sport, setSport] = useState(SPORT_OPTIONS[0]);
   const [category, setCategory] = useState(CATEGORY_OPTIONS[0]);
   const [description, setDescription] = useState("");
   const [source, setSource] = useState("");
-  const [images, setImages] = useState<string[]>([]);
   const [priceUsd, setPriceUsd] = useState(25);
   const [terms, setTerms] = useState("Research only · cohort-level use");
-  const [syntheticOnly, setSyntheticOnly] = useState(false);
-  const [created, setCreated] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
+  const [files, setFiles] = useState<ListingFile[]>([]);
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [published, setPublished] = useState<string | null>(null);
 
-  // Hydrate after mount to avoid SSR/localStorage mismatches.
-  useEffect(() => {
-    setListings(readListings());
-  }, []);
+  const canCreate = title.trim().length >= 3;
 
-  const canCreate = syntheticOnly && title.trim().length > 0;
+  async function publish() {
+    if (!canCreate || publishing) return;
+    setPublishing(true);
+    setError(null);
+    setPublished(null);
+    try {
+      const res = await fetch("/api/marketplace/listings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          sport,
+          category,
+          description: description.trim(),
+          source: source.trim() || "Unspecified provenance",
+          priceUsd: Number.isFinite(priceUsd) && priceUsd >= 0 ? priceUsd : 0,
+          terms: terms.trim() || "No terms stated",
+        }),
+      });
+      if (res.status === 401) {
+        setError("Sign in required to publish — guests can browse but cannot list.");
+        return;
+      }
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(body.error ?? "Publish failed.");
+        return;
+      }
+      const { listing } = (await res.json()) as { listing: { id: string } };
 
-  function createListing() {
-    if (!canCreate) return;
-    const listing: LocalListing = {
-      id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      title: title.trim(),
-      sport,
-      category,
-      description: description.trim(),
-      source: source.trim() || "Unspecified provenance",
-      priceUsd: Number.isFinite(priceUsd) && priceUsd >= 0 ? priceUsd : 0,
-      terms: terms.trim() || "No terms stated",
-      images: images.slice(0, 6),
-      createdAt: new Date().toISOString(),
-    };
-    const next = [listing, ...readListings()];
-    writeListings(next);
-    setListings(next);
-    setTitle("");
-    setDescription("");
-    setSource("");
-    setImages([]);
-    setSyntheticOnly(false);
-    setCreated(listing.id);
-  }
+      // Upload selected photos, keyed to the new listing id.
+      let uploaded = 0;
+      let failed = 0;
+      for (const dataUrl of images.slice(0, 6)) {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], `listing-photo-${uploaded + 1}.jpg`, {
+            type: blob.type || "image/jpeg",
+          });
+          const fd = new FormData();
+          fd.set("productKey", listing.id);
+          fd.append("files", file);
+          const up = await fetch("/api/marketplace/images", { method: "POST", body: fd });
+          if (up.ok) uploaded++;
+          else failed++;
+        } catch {
+          failed++;
+        }
+      }
 
-  function removeListing(id: string) {
-    const next = readListings().filter((l) => l.id !== id);
-    writeListings(next);
-    setListings(next);
-    if (created === id) setCreated(null);
+      setPublished(listing.id);
+      setTitle("");
+      setDescription("");
+      setSource("");
+      setPriceUsd(25);
+      setTerms("Research only · cohort-level use");
+      setImages([]);
+      setFiles([]);
+      // Keep files note: data files stay browser-local (not uploaded) in this demo.
+    } catch {
+      setError("Could not reach the server. Try again.");
+    } finally {
+      setPublishing(false);
+    }
   }
 
   return (
@@ -105,8 +106,8 @@ export function SellListing() {
           <CardLabel>Contribute responsibly</CardLabel>
           <h2 className="display-heading text-xl">List a dataset</h2>
           <p className="mt-1 text-sm text-muted">
-            Create a locally stored, synthetic listing card. This demo cannot accept or transfer
-            real data, payments, or licenses.
+            Publish a listing to the platform database — it appears in the marketplace for all
+            visitors. This is a demo: no payments, no money moved.
           </p>
 
           <div className="mt-4 grid gap-3">
@@ -154,12 +155,13 @@ export function SellListing() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                placeholder="Describe a fictional sample and its intended cohort-level use."
+                placeholder="Describe your synthetic sample and its intended cohort-level use."
                 className="rounded-md border border-edge bg-panel-2 px-3 py-2 text-sm placeholder:text-muted focus:border-accent"
               />
             </label>
 
             <ListingImages value={images} onChange={setImages} />
+            <ListingFiles value={files} onChange={setFiles} />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1">
@@ -195,30 +197,29 @@ export function SellListing() {
               />
             </label>
 
-            <label className="flex items-start gap-2 text-sm text-muted">
-              <input
-                type="checkbox"
-                checked={syntheticOnly}
-                onChange={(e) => setSyntheticOnly(e.target.checked)}
-                className="mt-0.5"
-              />
-              <span>This listing contains only synthetic/demo records</span>
-            </label>
+            {error ? (
+              <p role="alert" className="text-sm text-compromised">{error}</p>
+            ) : null}
+
+            {published ? (
+              <p role="status" className="text-sm text-ready">
+                Published ✓ — your listing is now live in the marketplace. Attached photos are
+                stored in the database; data files (if any) stay in this browser only in this demo.
+              </p>
+            ) : null}
 
             <div className="flex flex-wrap items-center gap-3">
-              <Button variant="primary" onClick={createListing} disabled={!canCreate}>
-                + Create local listing
+              <Button variant="primary" onClick={publish} disabled={!canCreate || publishing}>
+                {publishing ? "Publishing…" : "Publish listing"}
               </Button>
               {!canCreate ? (
-                <span className="text-xs text-muted">
-                  Requires a title and the synthetic-records confirmation.
-                </span>
+                <span className="text-xs text-muted">Requires a title of at least 3 characters.</span>
               ) : null}
             </div>
 
             <p className="text-xs text-muted">
-              Never enter real personal or health data. Listing metadata is stored locally in this
-              browser only; uploaded records are not transmitted anywhere.
+              Never enter real personal or health data. Synthetic demo records only. Checkout is a
+              demo flow — no payment is processed.
             </p>
           </div>
         </Card>
@@ -241,80 +242,10 @@ export function SellListing() {
             ))}
           </dl>
           <p className="mt-3 text-xs text-muted">
-            No listing is transmitted. Browser storage contains only listing metadata you enter.
-            Use fictional descriptions only.
+            Published listings are stored in the app database and shown to all visitors. Use
+            fictional descriptions only.
           </p>
         </Card>
-      </div>
-
-      <div className="lg:col-span-3">
-        {listings.length > 0 ? (
-          <Card ariaLabel="My local listings">
-            <div className="flex items-center justify-between">
-              <CardLabel>My local listings</CardLabel>
-              <span className="text-xs text-muted">{listings.length} stored in this browser</span>
-            </div>
-            <ul className="mt-3 grid gap-2">
-              {listings.map((l) => (
-                <li
-                  key={l.id}
-                  className="flex items-start justify-between gap-3 rounded-md border border-edge/60 bg-panel-2 p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Tag label="LOCAL" />
-                      <span className="text-xs text-muted">{l.sport} · {l.category}</span>
-                      {created === l.id ? (
-                        <span className="rounded-full border border-ready/40 bg-ready/10 px-2 py-0.5 text-[11px] font-semibold text-ready">
-                          Created
-                        </span>
-                      ) : null}
-                    </div>
-                    <h3 className="mt-1 truncate text-sm font-semibold text-ink">{l.title}</h3>
-                    {l.description ? (
-                      <p className="mt-0.5 truncate text-xs text-muted">{l.description}</p>
-                    ) : null}
-                    {l.images && l.images.length > 0 ? (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {l.images.slice(0, 4).map((src, i) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            key={`${l.id}-thumb-${i}`}
-                            src={src}
-                            alt={`${l.title} image ${i + 1}`}
-                            className="h-12 w-16 rounded border border-edge object-cover"
-                          />
-                        ))}
-                        {l.images.length > 4 ? (
-                          <span className="flex h-12 w-16 items-center justify-center rounded border border-edge bg-panel text-xs text-muted">
-                            +{l.images.length - 4}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    <p className="mt-1 text-xs text-muted">
-                      Provenance: {l.source} · Terms: {l.terms}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-2">
-                    <span className="tabular text-sm font-semibold text-accent">
-                      ${l.priceUsd.toFixed(2)}
-                    </span>
-                    <span className="text-[11px] text-muted">View-only · not checkout eligible</span>
-                    <Button
-                      variant="danger"
-                      onClick={() => removeListing(l.id)}
-                      className="text-xs"
-                      aria-label={`Remove local listing ${l.title}`}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ) : null}
       </div>
     </div>
   );

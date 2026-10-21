@@ -139,7 +139,7 @@ export function ListingImages({ value, onChange, error }: {
         <span className="text-muted">
           {value.length}/{MAX_LISTING_PHOTOS} selected · resized to max 1200px in your browser
         </span>
-        <span className="text-[11px] text-muted">Photos stay in this browser — never uploaded.</span>
+        <span className="text-[11px] text-muted">Resized in your browser · stored in the app database when you publish.</span>
       </div>
 
       <input

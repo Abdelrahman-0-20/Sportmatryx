@@ -3,6 +3,7 @@ import { withFallback } from "@/lib/offline";
 import { audit } from "./audit";
 import type { SessionUser } from "@/lib/auth/session";
 import { demoPriceCents, formatUsdCents } from "@/lib/marketplace/demo-pricing";
+import { PUBLISHED_STATUS } from "@/lib/marketplace/listings";
 
 /**
  * Marketplace — purchasable data-product catalog derived from existing import
@@ -22,12 +23,16 @@ export interface MarketProduct {
   currency: string;
   rowsEstimate: number | null;
   includes: string[];
-  tag: string; // PROTOTYPE / ESTABLISHED / SAMPLE
+  tag: string; // PROTOTYPE / ESTABLISHED / SAMPLE / COMMUNITY / LOCAL
   available: boolean;
   // Demo highlight flags (additive). `featured` marks the demo's flagship
   // device package; claims are scoped to this demo only.
   featured?: boolean;
   featuredNote?: string;
+  // Community listings carry a cover photo served from /api/marketplace/images/[id].
+  imageId?: string | null;
+  // Seller display name (community listings only).
+  sellerName?: string | null;
 }
 
 export interface CartItem {
@@ -93,7 +98,55 @@ async function queryProducts(): Promise<MarketProduct[]> {
     }
   }
 
-  return [...byName.values(), ...sampleProducts()];
+  // -- Community listings -----------------------------------------------------
+  // User-published listings live in the same DB table the Sell form writes to
+  // (`market_listings`). They surface here as first-class catalog products so
+  // they get the same Add-to-cart / detail page / checkout flow as every
+  // other product. Cover photo (if uploaded) is served via /api/marketplace/images/[id].
+  const community = await prisma.marketListing.findMany({
+    where: { status: PUBLISHED_STATUS },
+    orderBy: { createdAt: "desc" },
+    take: 40,
+    include: { seller: { select: { name: true, email: true } } },
+  });
+
+  const communityKeys = community.map((c) => c.id);
+  const communityImages =
+    communityKeys.length > 0
+      ? await prisma.marketProductImage.findMany({
+          where: { productKey: { in: communityKeys } },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          select: { id: true, productKey: true },
+        })
+      : [];
+  const coverByProduct = new Map<string, string>();
+  for (const img of communityImages) {
+    if (!coverByProduct.has(img.productKey)) {
+      coverByProduct.set(img.productKey, img.id);
+    }
+  }
+
+  const fromCommunity: MarketProduct[] = community.map((c) => ({
+    id: c.id,
+    name: c.title,
+    description: c.description,
+    sourceLabel: "Community listing",
+    sourceRef: c.id,
+    priceCents: Math.round(c.priceUsd * 100),
+    currency: "USD",
+    rowsEstimate: null,
+    includes: [
+      `Sport: ${c.sport}`,
+      `Category: ${c.category}`,
+      ...(c.terms ? [`Terms: ${c.terms}`] : []),
+    ],
+    tag: "COMMUNITY",
+    available: true,
+    imageId: coverByProduct.get(c.id) ?? null,
+    sellerName: c.seller?.name ?? c.seller?.email ?? null,
+  }));
+
+  return [...byName.values(), ...sampleProducts(), ...fromCommunity];
 }
 
 export function sampleProducts(): MarketProduct[] {
@@ -292,4 +345,38 @@ function sampleSourceSummary(product: MarketProduct): {
         ]
       : [],
   };
+}
+
+// ---- Product photo gallery (additive) -------------------------------------
+// Photos live in the existing MarketProductImage table, keyed by product id.
+// Read-only here; upload/delete stays in /api/marketplace/images.
+
+export interface MarketProductImage {
+  id: string;
+  productKey: string;
+  mimeType: string;
+  sortOrder: number;
+  alt: string | null;
+}
+
+export async function productImages(productId: string): Promise<MarketProductImage[]> {
+  return withFallback(
+    () => queryProductImages(productId),
+    () => [] as MarketProductImage[],
+  );
+}
+
+async function queryProductImages(productId: string): Promise<MarketProductImage[]> {
+  const rows = await prisma.marketProductImage.findMany({
+    where: { productKey: productId },
+    select: { id: true, productKey: true, mimeType: true, sortOrder: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    take: 8,
+  });
+  // `alt` is not stored in the table; derive a label from sortOrder so the
+  // detail page can render meaningful alt text without new schema.
+  return rows.map((r, i) => ({
+    ...r,
+    alt: `${productId} photo ${i + 1}`,
+  }));
 }

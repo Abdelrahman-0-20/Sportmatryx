@@ -16,6 +16,15 @@ export function ProductCard({ product, onAddToCart }: { product: MarketProduct; 
 
   return (
     <Card className="card-lift" ariaLabel={product.name}>
+      {product.imageId ? (
+        // eslint-disable-next-line @next/next/no-img-element -- database-served image, not a remote file
+        <img
+          src={`/api/marketplace/images/${product.imageId}`}
+          alt={`${product.name} cover`}
+          className="mb-2 h-36 w-full rounded-md border border-edge object-cover"
+          loading="lazy"
+        />
+      ) : null}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs text-muted">
