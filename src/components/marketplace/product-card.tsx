@@ -116,7 +116,9 @@ export function ProductCard({ product, onAddToCart }: { product: MarketProduct; 
             {pulse ? "Added" : "Add to cart"}
           </Button>
         </div>
-        <DownloadSamplePreview product={product} />
+        {/* Sample CSV preview only makes sense for data products. Community
+            listings (e.g. physical goods) never had a CSV, so hide it there. */}
+        {product.tag !== "COMMUNITY" ? <DownloadSamplePreview product={product} /> : null}
       </div>
     </Card>
   );
