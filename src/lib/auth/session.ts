@@ -52,6 +52,9 @@ export async function createSession(userId: string): Promise<void> {
     path: "/",
     expires,
   });
+  // Logging in ends guest mode; otherwise a stale smx_guest cookie keeps
+  // isGuest() true forever and read paths silently serve sample data.
+  store.delete("smx_guest");
 }
 
 export async function destroySession(): Promise<void> {
